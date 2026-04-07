@@ -71,4 +71,7 @@ print(f'CJK fonts: {len(set(cjk))}'); \
 RUN pip install --no-cache-dir python-pptx python-docx && \
     python -c "import reportlab, pptx, click; print('All OK')"
 
-CMD ["python", "scripts/engine.py"]
+EXPOSE 9090
+
+# 默认启动 HTTP API 服务；也可覆盖为 CLI 模式
+CMD ["python", "scripts/server.py"]
