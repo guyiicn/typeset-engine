@@ -398,6 +398,244 @@ class PptxBuilder:
                             font_size=18, color=self.theme['text_light'])
             y += Inches(0.7)
 
+    def add_kpi_slide(self, title: str, kpis: List[Dict]):
+        """
+        指标卡片页 — 4-6个 KPI 大数字展示。
+        kpis = [{"label": "营收", "value": "¥1,709亿", "change": "+15.7%"}, ...]
+        """
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        self._add_bg(slide)
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0), Inches(0), self.slide_w, Inches(0.06),
+                        self.theme['primary'])
+
+        self._add_text(slide, title,
+                        Inches(0.8), Inches(0.4), Inches(11), Inches(0.7),
+                        font_size=28, bold=True, color=self.theme['primary'])
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0.8), Inches(1.15), Inches(11.5), Inches(0.02),
+                        self.theme['primary'])
+
+        # 布局 KPI 卡片（每行3个）
+        cols = min(len(kpis), 3)
+        card_w = 11.5 / cols
+        for i, kpi in enumerate(kpis[:6]):
+            col = i % cols
+            row = i // cols
+            x = Inches(0.8 + col * card_w)
+            y = Inches(1.8 + row * 2.5)
+
+            # 卡片背景
+            self._add_shape(slide, MSO_SHAPE.ROUNDED_RECTANGLE,
+                            x, y, Inches(card_w - 0.3), Inches(2),
+                            self.theme['table_alt'] if self.theme['bg_color'] == RGBColor(0xff, 0xff, 0xff)
+                            else self.theme['accent_bg'])
+
+            # 数值
+            self._add_text(slide, kpi.get('value', ''),
+                            x + Inches(0.2), y + Inches(0.3),
+                            Inches(card_w - 0.7), Inches(0.8),
+                            font_size=32, bold=True, color=self.theme['primary'],
+                            alignment=PP_ALIGN.CENTER)
+
+            # 标签
+            self._add_text(slide, kpi.get('label', ''),
+                            x + Inches(0.2), y + Inches(1.1),
+                            Inches(card_w - 0.7), Inches(0.4),
+                            font_size=14, color=self.theme['text_dark'],
+                            alignment=PP_ALIGN.CENTER,
+                            font_name=self.theme['font_body'])
+
+            # 变化率
+            change = kpi.get('change', '')
+            if change:
+                is_positive = change.startswith('+')
+                change_color = RGBColor(0xCC, 0x00, 0x00) if is_positive else RGBColor(0x00, 0x99, 0x00)
+                self._add_text(slide, change,
+                                x + Inches(0.2), y + Inches(1.5),
+                                Inches(card_w - 0.7), Inches(0.3),
+                                font_size=12, color=change_color,
+                                alignment=PP_ALIGN.CENTER)
+
+    def add_chart_slide(self, title: str, image: str, caption: str = '',
+                         notes_text: str = ''):
+        """全幅图表页 — 一张图占满幻灯片"""
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        self._add_bg(slide)
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0), Inches(0), self.slide_w, Inches(0.06),
+                        self.theme['primary'])
+
+        self._add_text(slide, title,
+                        Inches(0.8), Inches(0.4), Inches(11), Inches(0.7),
+                        font_size=28, bold=True, color=self.theme['primary'])
+
+        if image and os.path.exists(image):
+            slide.shapes.add_picture(image,
+                Inches(0.8), Inches(1.3), Inches(11.5), Inches(5.2))
+
+        if caption:
+            self._add_text(slide, caption,
+                            Inches(0.8), Inches(6.7), Inches(11), Inches(0.4),
+                            font_size=10, color=self.theme['secondary'],
+                            font_name=self.theme['font_body'])
+
+        if notes_text:
+            slide.notes_slide.notes_text_frame.text = notes_text
+
+    def add_comparison_slide(self, title: str, left_title: str, left_items: List[str],
+                              right_title: str, right_items: List[str]):
+        """对比页 — 左右两栏对比（优势vs风险、现在vs未来等）"""
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        self._add_bg(slide)
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0), Inches(0), self.slide_w, Inches(0.06),
+                        self.theme['primary'])
+
+        self._add_text(slide, title,
+                        Inches(0.8), Inches(0.4), Inches(11), Inches(0.7),
+                        font_size=28, bold=True, color=self.theme['primary'])
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0.8), Inches(1.15), Inches(11.5), Inches(0.02),
+                        self.theme['primary'])
+
+        # 中间分隔线
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(6.6), Inches(1.5), Inches(0.03), Inches(5),
+                        self.theme['secondary'])
+
+        # 左栏标题
+        self._add_text(slide, left_title,
+                        Inches(0.8), Inches(1.5), Inches(5.5), Inches(0.6),
+                        font_size=20, bold=True, color=self.theme['primary'])
+
+        # 左栏内容
+        y = Inches(2.3)
+        for item in left_items[:8]:
+            self._add_text(slide, f"▸ {item}",
+                            Inches(1), y, Inches(5), Inches(0.5),
+                            font_size=14, color=self.theme['text_dark'],
+                            font_name=self.theme['font_body'])
+            y += Inches(0.5)
+
+        # 右栏标题
+        self._add_text(slide, right_title,
+                        Inches(7), Inches(1.5), Inches(5.5), Inches(0.6),
+                        font_size=20, bold=True, color=self.theme['secondary'])
+
+        # 右栏内容
+        y = Inches(2.3)
+        for item in right_items[:8]:
+            self._add_text(slide, f"▸ {item}",
+                            Inches(7.2), y, Inches(5), Inches(0.5),
+                            font_size=14, color=self.theme['text_dark'],
+                            font_name=self.theme['font_body'])
+            y += Inches(0.5)
+
+    def add_timeline_slide(self, title: str, events: List[Dict]):
+        """
+        时间线页 — 展示里程碑/事件序列。
+        events = [{"date": "2024 Q1", "event": "营收突破1500亿"}, ...]
+        """
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        self._add_bg(slide)
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0), Inches(0), self.slide_w, Inches(0.06),
+                        self.theme['primary'])
+
+        self._add_text(slide, title,
+                        Inches(0.8), Inches(0.4), Inches(11), Inches(0.7),
+                        font_size=28, bold=True, color=self.theme['primary'])
+
+        # 时间线横轴
+        n = min(len(events), 6)
+        if n == 0:
+            return
+
+        line_y = Inches(4)
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(1), line_y, Inches(11.3), Inches(0.03),
+                        self.theme['primary'])
+
+        step = 11.3 / n
+        for i, evt in enumerate(events[:6]):
+            x = Inches(1 + i * step + step / 2 - 0.5)
+
+            # 节点圆点
+            dot = slide.shapes.add_shape(
+                MSO_SHAPE.OVAL, x + Inches(0.4), line_y - Inches(0.08),
+                Inches(0.2), Inches(0.2))
+            dot.fill.solid()
+            dot.fill.fore_color.rgb = self.theme['primary']
+            dot.line.fill.background()
+
+            # 日期（上方）
+            self._add_text(slide, evt.get('date', ''),
+                            x, line_y - Inches(0.8), Inches(1), Inches(0.5),
+                            font_size=11, bold=True, color=self.theme['primary'],
+                            alignment=PP_ALIGN.CENTER)
+
+            # 事件（下方）
+            self._add_text(slide, evt.get('event', ''),
+                            x - Inches(0.2), line_y + Inches(0.3), Inches(1.4), Inches(1.5),
+                            font_size=10, color=self.theme['text_dark'],
+                            alignment=PP_ALIGN.CENTER,
+                            font_name=self.theme['font_body'])
+
+    def add_quote_slide(self, quote: str, author: str = '', source: str = ''):
+        """引用页 — 大字引用"""
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        self._add_bg(slide, self.theme['accent_bg'])
+
+        # 引号装饰
+        self._add_text(slide, '"',
+                        Inches(1), Inches(1), Inches(2), Inches(1.5),
+                        font_size=80, color=self.theme['secondary'],
+                        alignment=PP_ALIGN.LEFT)
+
+        # 引用文本
+        self._add_text(slide, quote,
+                        Inches(1.5), Inches(2.5), Inches(10), Inches(2.5),
+                        font_size=24, color=self.theme['text_light'],
+                        alignment=PP_ALIGN.LEFT)
+
+        # 作者
+        attribution = f"— {author}" + (f", {source}" if source else "")
+        if author:
+            self._add_text(slide, attribution,
+                            Inches(1.5), Inches(5.5), Inches(10), Inches(0.6),
+                            font_size=16, color=self.theme['secondary'],
+                            alignment=PP_ALIGN.RIGHT)
+
+    def add_end_slide(self, title: str = 'Thank You', subtitle: str = '',
+                       contact: str = ''):
+        """结束页"""
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        self._add_bg(slide, self.theme['accent_bg'])
+
+        self._add_text(slide, title,
+                        Inches(1), Inches(2.5), Inches(11), Inches(1.5),
+                        font_size=44, bold=True, color=self.theme['text_light'],
+                        alignment=PP_ALIGN.CENTER)
+
+        if subtitle:
+            self._add_text(slide, subtitle,
+                            Inches(1), Inches(4.2), Inches(11), Inches(0.8),
+                            font_size=18, color=self.theme['secondary'],
+                            alignment=PP_ALIGN.CENTER)
+
+        if contact:
+            self._add_text(slide, contact,
+                            Inches(1), Inches(5.5), Inches(11), Inches(0.6),
+                            font_size=14, color=self.theme['text_light'],
+                            alignment=PP_ALIGN.CENTER)
+
     def save(self, output_path: str):
         """保存 PPTX"""
         os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
@@ -487,6 +725,43 @@ def render_pptx(data: Dict, output_path: str, template: str = 'default'):
             builder.add_summary_slide(
                 title=slide_data.get('title', ''),
                 points=slide_data.get('points', slide_data.get('bullets', [])),
+            )
+
+        elif layout == 'chart':
+            builder.add_chart_slide(
+                title=slide_data.get('title', ''),
+                image=slide_data.get('image', ''),
+                caption=slide_data.get('caption', ''),
+            )
+        elif layout == 'kpi':
+            builder.add_kpi_slide(
+                title=slide_data.get('title', ''),
+                kpis=slide_data.get('kpis', []),
+            )
+        elif layout == 'comparison':
+            builder.add_comparison_slide(
+                title=slide_data.get('title', ''),
+                left_title=slide_data.get('left_title', ''),
+                left_items=slide_data.get('left_items', []),
+                right_title=slide_data.get('right_title', ''),
+                right_items=slide_data.get('right_items', []),
+            )
+        elif layout == 'timeline':
+            builder.add_timeline_slide(
+                title=slide_data.get('title', ''),
+                events=slide_data.get('events', []),
+            )
+        elif layout == 'quote':
+            builder.add_quote_slide(
+                quote=slide_data.get('quote', slide_data.get('content', '')),
+                author=slide_data.get('author', ''),
+                source=slide_data.get('source', ''),
+            )
+        elif layout == 'end':
+            builder.add_end_slide(
+                title=slide_data.get('title', 'Thank You'),
+                subtitle=slide_data.get('subtitle', ''),
+                contact=slide_data.get('contact', ''),
             )
 
     builder.save(output_path)
