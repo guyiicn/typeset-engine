@@ -100,6 +100,37 @@ def _generate_charts(data: Dict, work_dir: str, theme_name: str) -> Dict[str, st
     return chart_paths
 
 
+def _generate_ai_images(data: Dict, work_dir: str) -> Dict[str, str]:
+    """生成 AI 配图（ai-image section type 引用的图片），返回 {image_id: png_path}"""
+    ai_images = data.get('illustrations', [])
+    if not ai_images:
+        return {}
+
+    try:
+        from render_illustrate import generate_illustration
+    except ImportError:
+        try:
+            from scripts.render_illustrate import generate_illustration
+        except ImportError:
+            print("  WARNING: render_illustrate not available, skipping AI images")
+            return {}
+
+    paths = {}
+    for i, img_def in enumerate(ai_images):
+        img_id = img_def.get('id', f'ai_img_{i}')
+        content = img_def.get('content', '')
+        style = img_def.get('style', 'gradient-glass')
+        title = img_def.get('title', '')
+        out_path = os.path.join(work_dir, f'{img_id}.png')
+        try:
+            result = generate_illustration(content, out_path, style, title)
+            if result:
+                paths[img_id] = out_path
+        except Exception as e:
+            print(f"  WARNING: AI image '{img_id}' failed: {e}")
+    return paths
+
+
 def _build_cover(data: Dict, theme: Dict) -> str:
     """生成封面 Typst 代码"""
     title_zh = _escape_typst(data.get('title', '研究报告'))
@@ -150,6 +181,17 @@ def _build_section(section: Dict, chart_paths: Dict, depth: int = 1) -> str:
         if chart_id in chart_paths:
             # Typst 需要相对路径（相对于 .typ 文件所在目录）
             png_filename = os.path.basename(chart_paths[chart_id])
+            lines.append(f'\n#align(center)[\n  #image("{png_filename}", width: {width})\n]\n')
+            if caption:
+                lines.append(f'#align(center)[#text(size: 9pt, fill: rgb("#666666"))[{caption}]]\n')
+
+    elif sec_type == 'ai-image':
+        # AI 配图：渲染时由外部预生成，这里只嵌入图片
+        img_id = section.get('image_id', '')
+        caption = _escape_typst(section.get('caption', ''))
+        width = section.get('width', '85%')
+        if img_id in chart_paths:
+            png_filename = os.path.basename(chart_paths[img_id])
             lines.append(f'\n#align(center)[\n  #image("{png_filename}", width: {width})\n]\n')
             if caption:
                 lines.append(f'#align(center)[#text(size: 9pt, fill: rgb("#666666"))[{caption}]]\n')
@@ -433,6 +475,12 @@ def render_pdf(data: Dict, output: str, template: str = 'default',
         # 1. 生成图表
         chart_paths = _generate_charts(data, work_dir, theme)
         print(f"  Charts generated: {len(chart_paths)}")
+
+        # AI 配图
+        ai_paths = _generate_ai_images(data, work_dir)
+        if ai_paths:
+            print(f"  AI images generated: {len(ai_paths)}")
+            chart_paths.update(ai_paths)
 
         # 2. 生成 .typ 源文件
         typ_content = generate_typ(data, chart_paths, theme)

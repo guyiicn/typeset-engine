@@ -166,6 +166,27 @@ def styles():
 
 
 # ═══════════════════════════════════════════
+# AI 配图（Gemini 生成文档插图）
+# ═══════════════════════════════════════════
+@cli.command()
+@click.option('--content', required=True, help='Text content to illustrate')
+@click.option('--output', required=True, help='Output image path (.png)')
+@click.option('--style', default='gradient-glass',
+              help='Style: gradient-glass / vector-illustration / ticket')
+@click.option('--title', default='', help='Optional title overlay')
+@click.option('--ratio', default='16:9', help='Aspect ratio: 16:9 / 3:4 / 1:1')
+@click.option('--cover', is_flag=True, help='Generate as cover image')
+def illustrate(content, output, style, title, ratio, cover):
+    """AI 配图 — Gemini 生成文档插图"""
+    from scripts.render_illustrate import generate_illustration
+    result = generate_illustration(content, output, style, title, ratio, cover)
+    if result:
+        click.echo(f"✅ Illustration: {result}")
+    else:
+        click.echo("❌ Generation failed", err=True)
+
+
+# ═══════════════════════════════════════════
 # 文件对比
 # ═══════════════════════════════════════════
 @cli.command()

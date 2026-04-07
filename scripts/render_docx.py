@@ -402,7 +402,7 @@ def _build_table(doc: Document, section: Dict, theme: Dict):
             if row_idx % 2 == 1:
                 _set_cell_shading(cell, theme['table_alt_row'])
             for para in cell.paragraphs:
-                para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                para.alignment = WD_ALIGN_PARAGRAPH.LEFT
                 for run in para.runs:
                     run.font.size = Pt(9.5)
                     run.font.color.rgb = theme['text_body']
@@ -482,7 +482,7 @@ def _build_kpi(doc: Document, section: Dict, theme: Dict):
         cell = table.cell(0, i)
         cell.text = m.get('label', '')
         for para in cell.paragraphs:
-            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            para.alignment = WD_ALIGN_PARAGRAPH.LEFT
             for run in para.runs:
                 run.font.size = Pt(9)
                 run.font.color.rgb = theme['text_secondary']
@@ -491,7 +491,7 @@ def _build_kpi(doc: Document, section: Dict, theme: Dict):
         cell = table.cell(1, i)
         cell.text = str(m.get('value', ''))
         for para in cell.paragraphs:
-            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            para.alignment = WD_ALIGN_PARAGRAPH.LEFT
             for run in para.runs:
                 run.font.size = Pt(20)
                 run.font.bold = True
@@ -502,7 +502,7 @@ def _build_kpi(doc: Document, section: Dict, theme: Dict):
         change = str(m.get('change', ''))
         cell.text = change
         for para in cell.paragraphs:
-            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            para.alignment = WD_ALIGN_PARAGRAPH.LEFT
             for run in para.runs:
                 run.font.size = Pt(9)
                 if change.startswith('+'):
@@ -537,6 +537,15 @@ def _build_section(doc: Document, section: Dict, chart_paths: Dict,
 
     elif sec_type == 'chart':
         _build_chart(doc, section, chart_paths, theme)
+
+    elif sec_type == 'ai-image':
+        # AI 配图：复用 chart 嵌入逻辑，image_id 对应预生成的 PNG
+        ai_section = {
+            'chart_id': section.get('image_id', ''),
+            'caption': section.get('caption', ''),
+            'width_inches': section.get('width_inches', 5.5),
+        }
+        _build_chart(doc, ai_section, chart_paths, theme)
 
     elif sec_type == 'kpi':
         _build_kpi(doc, section, theme)
@@ -670,6 +679,27 @@ def render_docx(data: Dict, output: str, template: str = 'default',
         # 1. 图表
         chart_paths = _generate_charts(data, work_dir, theme)
         print(f"  Charts generated: {len(chart_paths)}")
+
+        # 1b. AI 配图
+        ai_images = data.get('illustrations', [])
+        if ai_images:
+            try:
+                from render_illustrate import generate_illustration
+            except ImportError:
+                from scripts.render_illustrate import generate_illustration
+            for i, img_def in enumerate(ai_images):
+                img_id = img_def.get('id', f'ai_img_{i}')
+                out_path = os.path.join(work_dir, f'{img_id}.png')
+                try:
+                    result = generate_illustration(
+                        img_def.get('content', ''), out_path,
+                        img_def.get('style', 'gradient-glass'),
+                        img_def.get('title', ''))
+                    if result:
+                        chart_paths[img_id] = out_path
+                except Exception as e:
+                    print(f"  WARNING: AI image '{img_id}' failed: {e}")
+            print(f"  AI images generated: {len([k for k in chart_paths if k.startswith('ai_')])}")
 
         # 2. 封面
         _build_cover(doc, data, th)
