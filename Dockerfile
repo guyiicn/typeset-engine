@@ -21,13 +21,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && fc-cache -fv 2>/dev/null || true
 
-# 增量安装（base image 已有 reportlab, matplotlib, pdfplumber 等）
+# 增量安装
 RUN pip install --no-cache-dir \
     fpdf2 \
     cairosvg \
     python-docx \
     click \
+    plotly \
+    "kaleido>=1.0.0" \
+    google-genai \
+    python-dotenv \
     || echo "Some packages may have warnings, continuing"
+
+# Chrome 系统依赖 + 中文字体 + FFmpeg（视频合成）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libnss3 libatk-bridge2.0-0 libcups2 libxcomposite1 libxdamage1 \
+    libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 \
+    libcairo2 libasound2 \
+    fonts-noto-cjk \
+    ffmpeg \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && fc-cache -fv
+
+# Kaleido v1 需要 Chrome — 必须成功安装
+RUN plotly_get_chrome -y
+
+# Typst 排版引擎（PDF 生成）— 先装 curl+xz，下载安装，再清理
+RUN apt-get update && apt-get install -y --no-install-recommends curl xz-utils \
+    && curl -fsSL https://github.com/typst/typst/releases/download/v0.14.0/typst-x86_64-unknown-linux-musl.tar.xz \
+       | tar -xJ --strip-components=1 -C /usr/local/bin/ \
+    && typst --version \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # ═══════════════════════════════════════════
 # 复制项目文件

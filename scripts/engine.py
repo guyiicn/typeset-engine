@@ -101,13 +101,68 @@ def pptx(template, data, output):
 @click.option('--template', default='default', help='Template name')
 @click.option('--data', required=True, help='Input JSON data file')
 @click.option('--output', required=True, help='Output DOCX path')
-def docx(template, data, output):
+@click.option('--theme', default='cicc', help='Theme: cicc/ms/cms/dachen')
+def docx(template, data, output, theme):
     """渲染 DOCX 文档"""
     from scripts.render_docx import render_docx
     with open(data) as f:
         data_dict = json.load(f)
-    render_docx(data_dict, output, template=template)
+    render_docx(data_dict, output, template=template, theme=theme)
     click.echo(f"✅ DOCX: {output}")
+
+
+# ═══════════════════════════════════════════
+# 文件对比
+# ═══════════════════════════════════════════
+# ═══════════════════════════════════════════
+# 图表渲染
+# ═══════════════════════════════════════════
+@cli.command()
+@click.option('--type', 'chart_type', required=True,
+               type=click.Choice(['bar', 'line', 'area', 'pie', 'waterfall', 'scatter',
+                                   'heatmap', 'radar', 'funnel', 'gauge', 'treemap',
+                                   'candlestick', 'combo']),
+               help='Chart type')
+@click.option('--data', required=True, help='Input JSON data file')
+@click.option('--output', required=True, help='Output image path (.png/.svg)')
+@click.option('--theme', default='default', help='Theme: default/cicc/goldman/dark')
+def chart(chart_type, data, output, theme):
+    """渲染商业图表"""
+    from scripts.render_charts import render_chart
+    with open(data) as f:
+        data_dict = json.load(f)
+    render_chart(chart_type, data_dict, output, theme)
+    click.echo(f"✅ Chart ({chart_type}): {output}")
+
+
+# ═══════════════════════════════════════════
+# AI PPT（Gemini 图片生成 + FFmpeg 视频）
+# ═══════════════════════════════════════════
+@cli.command('pptx-ai')
+@click.option('--data', required=True, help='Input slides_plan JSON file')
+@click.option('--output', required=True, help='Output directory')
+@click.option('--style', default='gradient-glass',
+              help='Style: gradient-glass / vector-illustration / custom .md name')
+@click.option('--resolution', default='2K', type=click.Choice(['2K', '4K']))
+@click.option('--video/--no-video', default=True, help='Generate MP4 video')
+@click.option('--duration', default=3.0, help='Seconds per slide in video')
+@click.option('--transition', default='fade',
+              help='Video transition: fade/dissolve/wipeleft/slideright/none')
+def pptx_ai(data, output, style, resolution, video, duration, transition):
+    """AI 风格 PPT — Gemini 生成精美幻灯片 + HTML 播放器 + MP4 视频"""
+    from scripts.render_pptx_ai import render_pptx_ai
+    with open(data) as f:
+        data_dict = json.load(f)
+    result = render_pptx_ai(data_dict, output, style, resolution, video, duration, transition)
+    click.echo(f"✅ AI PPT: {len(result['images'])} slides → {output}")
+
+
+@cli.command('styles')
+def styles():
+    """列出可用的 AI PPT 风格"""
+    from scripts.render_pptx_ai import list_styles
+    for s in list_styles():
+        click.echo(f"  {s['id']:25s} — {s['name']}")
 
 
 # ═══════════════════════════════════════════
