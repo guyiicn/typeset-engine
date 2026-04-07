@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "typeset-engine DOCX Input Schema",
+  "description": "DOCX 渲染引擎的 JSON 输入格式规范",
+  "type": "object",
+  "required": ["title", "sections"],
+
+  "definitions": {
+    "section": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["heading", "paragraph", "quote", "table", "chart", "pagebreak", "kpi"],
+          "description": "段落类型"
+        },
+        "title": { "type": "string", "description": "标题文本（heading 类型必填）" },
+        "content": { "type": "string", "description": "正文内容" },
+        "headers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "表头（table 类型必填）"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "description": "表格数据行（table 类型必填）"
+        },
+        "chart_id": { "type": "string", "description": "图表 ID（chart 类型必填）" },
+        "caption": { "type": "string", "description": "图表说明" },
+        "width_inches": { "type": "number", "description": "图表宽度（英寸）" },
+        "metrics": {
+          "type": "array",
+          "description": "KPI 指标列表（kpi 类型必填）",
+          "items": {
+            "type": "object",
+            "required": ["label", "value"],
+            "properties": {
+              "label": { "type": "string" },
+              "value": { "type": "string" },
+              "change": { "type": "string" }
+            }
+          }
+        },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/section" }
+        }
+      },
+      "required": ["type"],
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "heading" } } },
+          "then": { "required": ["title"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "table" } } },
+          "then": { "required": ["rows"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "chart" } } },
+          "then": { "required": ["chart_id"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "kpi" } } },
+          "then": { "required": ["metrics"] }
+        }
+      ]
+    }
+  },
+
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "报告标题",
+      "maxLength": 100
+    },
+    "title_en": {
+      "type": "string",
+      "description": "英文副标题"
+    },
+    "author": { "type": "string" },
+    "date": { "type": "string" },
+    "version": { "type": "string" },
+    "toc": {
+      "type": "boolean",
+      "default": true
+    },
+    "disclaimer": { "type": "string" },
+    "sections": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/section" },
+      "minItems": 1
+    }
+  },
+
+  "additionalProperties": true
+}

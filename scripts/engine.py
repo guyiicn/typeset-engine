@@ -104,6 +104,19 @@ def pptx(template, data, output):
 @click.option('--theme', default='cicc', help='Theme: cicc/ms/cms/dachen')
 def docx(template, data, output, theme):
     """渲染 DOCX 文档"""
+    # 1. 预检验数据格式
+    try:
+        from scripts.validate_docx import validate_docx_data
+        issues = validate_docx_data(data)
+        if issues:
+            click.echo("[警告] 数据存在以下潜在问题：")
+            for issue in issues:
+                click.echo(f"  ⚠ {issue}")
+            click.echo("  继续渲染，如需严格模式请修复后重试。")
+    except Exception:
+        pass  # 检验失败不影响渲染
+
+    # 2. 渲染
     from scripts.render_docx import render_docx
     with open(data) as f:
         data_dict = json.load(f)

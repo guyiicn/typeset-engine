@@ -111,6 +111,25 @@ def _hex_to_rgb(hex_str: str) -> RGBColor:
     return RGBColor(int(hex_str[0:2], 16), int(hex_str[2:4], 16), int(hex_str[4:6], 16))
 
 
+
+
+def _set_run_font(run, font_western=None, font_cjk=None, size=None, bold=False, italic=False, color=None):
+    """统一设置 Run 字体：西文用 DejaVu Sans，汉字用 Noto Serif CJK SC"""
+    fw = font_western or 'DejaVu Sans'
+    fc = font_cjk or 'Noto Serif CJK SC'
+    run.font.name = fw
+    run._element.rPr.rFonts.set(qn('w:eastAsia'), fc)
+    run._element.rPr.rFonts.set(qn('w:hAnsi'), fw)
+    run._element.rPr.rFonts.set(qn('w:ascii'), fw)
+    if size:
+        run.font.size = size
+    if bold:
+        run.font.bold = True
+    if italic:
+        run.font.italic = True
+    if color:
+        run.font.color.rgb = color
+
 def _set_cell_shading(cell, color_hex: str):
     """设置单元格背景色"""
     shading = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{color_hex}"/>')
@@ -319,21 +338,56 @@ def _build_heading(doc: Document, title: str, level: int, theme: Dict):
 
 
 def _build_paragraph(doc: Document, content: str, theme: Dict, first_indent: bool = True):
-    """添加正文段落"""
-    p = doc.add_paragraph()
-    run = p.add_run(content)
-    run.font.size = Pt(10.5)
-    run.font.color.rgb = theme['text_body']
-    run.font.name = theme['font_body']
-    run._element.rPr.rFonts.set(qn('w:eastAsia'), theme['font_body'])
+    """添加正文段落
 
-    p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    _set_paragraph_spacing(p, 4, 4, 18)
+    - 原始字符串中的 \n\n → 分段（多段落）
+    - 原始字符串中的 \n   → 同段内换行（但用普通换行而非软回车，因为docx换行语义较弱）
+    - 以 • 或 - 或数字. 开头的行 → 加悬挂缩进（列表风格）
+    """
+    # 先按 \n\n 分段
+    blocks = content.split('\n\n')
 
-    if first_indent:
-        p.paragraph_format.first_line_indent = Cm(0.74)  # ~2em
+    for block_idx, block in enumerate(blocks):
+        block = block.strip()
+        if not block:
+            continue
 
-    return p
+        # 处理块内单换行（同一段内的多行合并成一行，避免JUSTIFY把每行单独处理）
+        # 策略：保留换行但设置合理的对齐方式
+        lines = block.split('\n')
+
+        for line_idx, line in enumerate(lines):
+            line = line.strip()
+            if not line:
+                continue
+
+            is_list_item = line.startswith(('• ', '- ', '* '))
+            is_heading_like = (line_idx == 0 and not line.startswith(('•', '-', '*', '1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.')))
+
+            p = doc.add_paragraph()
+
+            # 字体设置
+            run = p.add_run(line)
+            run.font.size = Pt(10.5)
+            run.font.color.rgb = theme['text_body']
+            _set_run_font(run, size=Pt(10.5), color=theme['text_body'])
+
+            # 对齐：列表项和正文都是左对齐，禁止居中和两端对齐
+            p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            _set_paragraph_spacing(p, 2, 2, 15)
+
+            # 悬挂缩进：列表项
+            if is_list_item:
+                p.paragraph_format.left_indent = Cm(0.5)
+                # 首行负缩进模拟悬挂
+                p.paragraph_format.first_line_indent = Cm(-0.5)
+            elif line_idx == 0 and block_idx == 0 and first_indent:
+                # 只有第一个块的第一行才首行缩进
+                p.paragraph_format.first_line_indent = Cm(0.74)
+            else:
+                p.paragraph_format.first_line_indent = Cm(0)
+
+    return None
 
 
 def _build_quote(doc: Document, content: str, theme: Dict):
@@ -344,8 +398,7 @@ def _build_quote(doc: Document, content: str, theme: Dict):
     run.font.bold = True
     run.font.italic = True
     run.font.color.rgb = theme['text_body']
-    run.font.name = theme['font_body']
-    run._element.rPr.rFonts.set(qn('w:eastAsia'), theme['font_body'])
+    _set_run_font(run, size=Pt(10.5), color=theme['text_body'])
 
     _set_paragraph_spacing(p, 8, 8)
     p.paragraph_format.left_indent = Cm(0.5)
@@ -388,9 +441,7 @@ def _build_table(doc: Document, section: Dict, theme: Dict):
                 for run in para.runs:
                     run.font.bold = True
                     run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-                    run.font.size = Pt(9.5)
-                    run.font.name = theme['font_body']
-                    run._element.rPr.rFonts.set(qn('w:eastAsia'), theme['font_body'])
+                    _set_run_font(run, size=Pt(9.5), bold=True, color=RGBColor(0xFF, 0xFF, 0xFF))
 
     # 数据行
     for row_idx, row_data in enumerate(rows):
@@ -404,10 +455,7 @@ def _build_table(doc: Document, section: Dict, theme: Dict):
             for para in cell.paragraphs:
                 para.alignment = WD_ALIGN_PARAGRAPH.LEFT
                 for run in para.runs:
-                    run.font.size = Pt(9.5)
-                    run.font.color.rgb = theme['text_body']
-                    run.font.name = theme['font_body']
-                    run._element.rPr.rFonts.set(qn('w:eastAsia'), theme['font_body'])
+                    _set_run_font(run, size=Pt(9.5), color=theme['text_body'])
 
     # 表格边框
     tbl = table._tbl
@@ -447,8 +495,7 @@ def _build_chart(doc: Document, section: Dict, chart_paths: Dict, theme: Dict):
         run = p.add_run(caption)
         run.font.size = Pt(9)
         run.font.color.rgb = theme['text_secondary']
-        run.font.name = theme['font_body']
-        run._element.rPr.rFonts.set(qn('w:eastAsia'), theme['font_body'])
+        _set_run_font(run, size=Pt(10.5), color=theme['text_body'])
         _set_paragraph_spacing(p, 2, 8)
 
 
@@ -635,8 +682,7 @@ def _build_disclaimer(doc: Document, data: Dict, theme: Dict):
     run = p.add_run(text)
     run.font.size = Pt(8)
     run.font.color.rgb = theme['text_secondary']
-    run.font.name = theme['font_body']
-    run._element.rPr.rFonts.set(qn('w:eastAsia'), theme['font_body'])
+    _set_run_font(run, size=Pt(10.5), color=theme['text_body'])
     _set_paragraph_spacing(p, 4, 4, 14)
 
 
