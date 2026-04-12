@@ -38,11 +38,8 @@
     margin: (top: 37mm, bottom: 35mm, left: 28mm, right: 26mm),
     header: none,
     footer: context {
-      align(center)[
-        #text(size: gw-size-sihao, font: font-fangsong)[
-          ～ #counter(page).display() ～
-        ]
-      ]
+      set text(size: gw-size-sihao, font: font-fangsong)
+      align(center)[～ #counter(page).display() ～]
     },
   )
 }
@@ -296,46 +293,44 @@
 
   set document(title: title, author: organ)
 
-  // ── 首页 ──
-  page()[
-    // 红头
-    #redhead(organ: organ, doc-type: doc-type, font-size: redhead-size)
+  // ── 正文 ──
+  // 红头
+  redhead(organ: organ, doc-type: doc-type, font-size: redhead-size)
 
-    // 发文字号
-    #doc-number(
-      number: number,
-      urgency: urgency,
-      secret-level: secret-level,
-      signer: signer,
+  // 发文字号
+  doc-number(
+    number: number,
+    urgency: urgency,
+    secret-level: secret-level,
+    signer: signer,
+  )
+
+  // 公文标题
+  gw-title(title: title)
+
+  // 主送机关
+  gw-recipient(to: recipient)
+
+  // 正文（重置缩进，确保段落首行缩进 2 字符）
+  set par(first-line-indent: 2em, justify: true, leading: 0.9em)
+  set text(size: gw-size-sanhao, font: font-fangsong, fill: gw-black, cjk-latin-spacing: none)
+  body
+
+  // 附件
+  gw-attachments(items: attachments)
+
+  // 落款
+  if signature-organ != "" or signature-date != "" {
+    gw-signature(organ: signature-organ, date: signature-date)
+  }
+
+  // 抄送/印发信息
+  if cc != "" or printer != "" {
+    gw-footer-info(
+      cc: cc,
+      printer: printer,
+      print-date: print-date,
+      copies: copies,
     )
-
-    // 公文标题
-    #gw-title(title: title)
-
-    // 主送机关
-    #gw-recipient(to: recipient)
-
-    // 正文（重置缩进，确保段落首行缩进 2 字符）
-    #set par(first-line-indent: 2em, justify: true, leading: 0.8em)
-    #set text(size: gw-size-sanhao, font: font-fangsong, fill: gw-black, cjk-latin-spacing: none)
-    #body
-
-    // 附件
-    #gw-attachments(items: attachments)
-
-    // 落款
-    #if signature-organ != "" or signature-date != "" {
-      gw-signature(organ: signature-organ, date: signature-date)
-    }
-
-    // 抄送/印发信息
-    #if cc != "" or printer != "" {
-      gw-footer-info(
-        cc: cc,
-        printer: printer,
-        print-date: print-date,
-        copies: copies,
-      )
-    }
-  ]
+  }
 }

@@ -511,8 +511,11 @@ def _generate_gongwen_typ(data: Dict) -> str:
     d = data
     lines = []
 
-    # 导入公文模板
+    # 导入公文模板 + 页码设置（必须在 #show 之前）
     lines.append('#import "/templates/gongwen.typ": *')
+    lines.append('')
+    lines.append('#set page(paper: "a4", margin: (top: 37mm, bottom: 35mm, left: 28mm, right: 26mm),')
+    lines.append('  footer: context { set text(size: 14pt); align(center)[～ #counter(page).display() ～] })')
     lines.append('')
 
     # 正文内容先生成
