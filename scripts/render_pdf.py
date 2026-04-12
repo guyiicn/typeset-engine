@@ -521,10 +521,12 @@ def _generate_gongwen_typ(data: Dict) -> str:
         stype = section.get('type', 'paragraph')
         if stype == 'paragraph':
             text = _escape_typst(section.get('content', ''))
-            # 支持 \n\n 分段
+            # 支持 \n\n 分段，\n 段内换行
             for para in text.split('\\n\\n'):
                 para = para.strip()
                 if para:
+                    # 单个 \n → Typst 强制换行 \
+                    para = para.replace('\\n', ' \\\n')
                     body_lines.append(f'{para}')
                     body_lines.append('')
         elif stype == 'heading':
@@ -535,6 +537,7 @@ def _generate_gongwen_typ(data: Dict) -> str:
                 ctype = child.get('type', 'paragraph')
                 if ctype == 'paragraph':
                     text = _escape_typst(child.get('content', ''))
+                    text = text.replace('\\n', ' \\\n')
                     body_lines.append(f'{text}')
                     body_lines.append('')
                 elif ctype == 'heading':
