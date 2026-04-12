@@ -92,12 +92,35 @@
   serif-body: true,               // 宋体正文（国资风）
 )
 
+// ── Theme: 公文 Gongwen (GB/T 9704-2012) ───────────────────
+#let theme-gongwen = (
+  name: "gongwen",
+  label: "党政公文 GB/T 9704",
+  primary: rgb("#e60012"),          // 公文红
+  accent: rgb("#e60012"),           // 红头/分隔线
+  text-primary: rgb("#000000"),     // 纯黑
+  text-body: rgb("#000000"),        // 纯黑
+  text-secondary: rgb("#333333"),
+  table-header-bg: rgb("#000000"),
+  table-header-fg: white,
+  table-alt-row: rgb("#f5f5f5"),
+  quote-border: rgb("#000000"),
+  quote-bg: rgb("#f5f5f5"),
+  cover-bg: white,
+  cover-fg: rgb("#000000"),
+  heading-rule-full: false,         // 公文无装饰线
+  heading-rule-partial: 0,
+  table-style: "full-border",
+  serif-body: true,                 // 仿宋正文
+)
+
 // ── Theme Registry ──────────────────────────────────────────
 #let themes = (
   cicc: theme-cicc,
   ms: theme-ms,
   cms: theme-cms,
   dachen: theme-dachen,
+  gongwen: theme-gongwen,
 )
 
 // ── Helper: Get theme by name ───────────────────────────────

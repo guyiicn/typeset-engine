@@ -54,6 +54,30 @@ THEMES = {
         'serif_body': True,
         'label': '达晨财智 Fortune Capital',
     },
+    'gongwen': {
+        'accent': '#e60012',
+        'heading': '#000000',
+        'serif_body': True,
+        'label': '党政公文 GB/T 9704',
+    },
+    'ieee': {
+        'accent': '#000000',
+        'heading': '#000000',
+        'serif_body': True,
+        'label': 'IEEE Conference/Journal',
+    },
+    'cn-paper': {
+        'accent': '#000000',
+        'heading': '#000000',
+        'serif_body': True,
+        'label': '中文学术论文',
+    },
+    'working-paper': {
+        'accent': '#333333',
+        'heading': '#000000',
+        'serif_body': True,
+        'label': 'Working Paper (SSRN)',
+    },
 }
 
 
@@ -454,6 +478,277 @@ def generate_typ(data: Dict, chart_paths: Dict, theme_name: str = 'cicc') -> str
     return '\n'.join(typ_lines)
 
 
+def _generate_gongwen_typ(data: Dict) -> str:
+    """生成公文 Typst 源文件（GB/T 9704 格式）。
+
+    公文 JSON 格式：
+    {
+        "organ": "国务院办公厅",
+        "doc_type": "文件",           // 或 "" 表示不显示
+        "number": "国办发〔2026〕1号",
+        "signer": "",                 // 上行文才需要
+        "title": "关于XX的通知",
+        "recipient": "各省、自治区、直辖市人民政府",
+        "sections": [
+            {"type": "paragraph", "content": "正文内容..."},
+            {"type": "heading", "title": "一、第一部分", "children": [...]},
+        ],
+        "signature_organ": "国务院办公厅",
+        "signature_date": "2026年4月12日",
+        "cc": "各部委",
+        "printer": "国务院办公厅秘书局",
+        "print_date": "2026年4月12日印发",
+        "copies": "200"
+    }
+    """
+    d = data
+    lines = []
+
+    # 导入公文模板
+    lines.append('#import "/templates/gongwen.typ": *')
+    lines.append('')
+
+    # 正文内容先生成
+    body_lines = []
+    for section in d.get('sections', []):
+        stype = section.get('type', 'paragraph')
+        if stype == 'paragraph':
+            text = _escape_typst(section.get('content', ''))
+            # 支持 \n\n 分段
+            for para in text.split('\\n\\n'):
+                para = para.strip()
+                if para:
+                    body_lines.append(f'{para}')
+                    body_lines.append('')
+        elif stype == 'heading':
+            title = _escape_typst(section.get('title', ''))
+            body_lines.append(f'= {title}')
+            body_lines.append('')
+            for child in section.get('children', []):
+                ctype = child.get('type', 'paragraph')
+                if ctype == 'paragraph':
+                    text = _escape_typst(child.get('content', ''))
+                    body_lines.append(f'{text}')
+                    body_lines.append('')
+                elif ctype == 'heading':
+                    ctitle = _escape_typst(child.get('title', ''))
+                    body_lines.append(f'== {ctitle}')
+                    body_lines.append('')
+                    for gc in child.get('children', []):
+                        if gc.get('type') == 'paragraph':
+                            body_lines.append(f'{_escape_typst(gc.get("content", ""))}')
+                            body_lines.append('')
+                        elif gc.get('type') == 'heading':
+                            body_lines.append(f'=== {_escape_typst(gc.get("title", ""))}')
+                            body_lines.append('')
+
+    body_content = '\n'.join(body_lines)
+
+    # 组装公文函数调用
+    lines.append('#show: gongwen.with(')
+    lines.append(f'  organ: "{_escape_typst(d.get("organ", "XX机关"))}",')
+    lines.append(f'  doc-type: "{_escape_typst(d.get("doc_type", "文件"))}",')
+    if d.get('number'):
+        lines.append(f'  number: "{_escape_typst(d["number"])}",')
+    if d.get('signer'):
+        lines.append(f'  signer: "{_escape_typst(d["signer"])}",')
+    lines.append(f'  title: "{_escape_typst(d.get("title", ""))}",')
+    if d.get('recipient'):
+        lines.append(f'  recipient: "{_escape_typst(d["recipient"])}",')
+    if d.get('signature_organ'):
+        lines.append(f'  signature-organ: "{_escape_typst(d["signature_organ"])}",')
+    if d.get('signature_date'):
+        lines.append(f'  signature-date: "{_escape_typst(d["signature_date"])}",')
+    if d.get('cc'):
+        lines.append(f'  cc: "{_escape_typst(d["cc"])}",')
+    if d.get('printer'):
+        lines.append(f'  printer: "{_escape_typst(d["printer"])}",')
+    if d.get('print_date'):
+        lines.append(f'  print-date: "{_escape_typst(d["print_date"])}",')
+    if d.get('copies'):
+        lines.append(f'  copies: "{_escape_typst(d["copies"])}",')
+    lines.append(')')
+    lines.append('')
+    lines.append(body_content)
+
+    return '\n'.join(lines)
+
+
+def _generate_academic_typ(data: Dict, template: str) -> str:
+    """生成学术论文 Typst 源文件。
+
+    学术论文 JSON 格式：
+    {
+        "template": "ieee" | "cn-paper" | "working-paper",
+        "title": "论文标题",
+        "authors": [
+            {"name": "张三", "department": "计算机系", "organization": "北京大学", "email": "zhang@pku.edu.cn"}
+        ],
+        "abstract": "摘要内容",
+        "keywords": ["关键词1", "关键词2"],
+        "sections": [
+            {"type": "heading", "title": "引言", "children": [
+                {"type": "paragraph", "content": "正文内容"}
+            ]}
+        ]
+    }
+    """
+    d = data
+    lines = []
+
+    # 导入模板
+    template_map = {
+        'ieee': '/templates/academic/ieee/lib.typ',
+        'cn-paper': '/templates/academic/cn-paper/lib.typ',
+        'working-paper': '/templates/academic/working-paper/lib.typ',
+    }
+    template_path = template_map.get(template, template_map['ieee'])
+
+    if template == 'ieee':
+        lines.append(f'#import "{template_path}": ieee')
+        lines.append('')
+        lines.append('#show: ieee.with(')
+        lines.append(f'  title: [{_escape_typst(d.get("title", "Paper Title"))}],')
+
+        # Authors
+        authors = d.get('authors', [])
+        if authors:
+            lines.append('  authors: (')
+            for a in authors:
+                lines.append('    (')
+                lines.append(f'      name: "{_escape_typst(a.get("name", ""))}",')
+                if a.get('department'):
+                    lines.append(f'      department: [{_escape_typst(a["department"])}],')
+                if a.get('organization'):
+                    lines.append(f'      organization: [{_escape_typst(a["organization"])}],')
+                if a.get('location'):
+                    lines.append(f'      location: [{_escape_typst(a["location"])}],')
+                if a.get('email'):
+                    lines.append(f'      email: "{a["email"]}",')
+                lines.append('    ),')
+            lines.append('  ),')
+
+        # Abstract
+        abstract = d.get('abstract', '')
+        if abstract:
+            lines.append(f'  abstract: [{_escape_typst(abstract)}],')
+
+        # Index terms / keywords
+        keywords = d.get('keywords', [])
+        if keywords:
+            terms = ', '.join(f'"{_escape_typst(k)}"' for k in keywords)
+            lines.append(f'  index-terms: ({terms}),')
+
+        lines.append('  paper-size: "a4",')
+        lines.append(')')
+
+    elif template == 'cn-paper':
+        lines.append(f'#import "{template_path}": *')
+        lines.append('')
+
+        # cn-paper 用 easy-paper 的 show 函数
+        title = _escape_typst(d.get('title', '论文标题'))
+        lines.append(f'#show: easy-paper.with(')
+        lines.append(f'  title: "{title}",')
+
+        authors = d.get('authors', [])
+        if authors:
+            author_names = ', '.join(f'"{_escape_typst(a.get("name", ""))}"' for a in authors)
+            lines.append(f'  author: ({author_names}),')
+
+        abstract = d.get('abstract', '')
+        if abstract:
+            lines.append(f'  abstract: [{_escape_typst(abstract)}],')
+
+        keywords = d.get('keywords', [])
+        if keywords:
+            kw_str = ', '.join(f'"{_escape_typst(k)}"' for k in keywords)
+            lines.append(f'  keywords: ({kw_str}),')
+
+        lines.append(')')
+
+    elif template == 'working-paper':
+        lines.append(f'#import "{template_path}": *')
+        lines.append('')
+        lines.append('#show: paper.with(')
+        lines.append(f'  title: "{_escape_typst(d.get("title", "Working Paper"))}",')
+
+        authors = d.get('authors', [])
+        if authors:
+            lines.append('  authors: (')
+            for a in authors:
+                lines.append('    (')
+                lines.append(f'      name: "{_escape_typst(a.get("name", ""))}",')
+                if a.get('affiliation'):
+                    lines.append(f'      affiliation: "{_escape_typst(a["affiliation"])}",')
+                if a.get('email'):
+                    lines.append(f'      email: "{a["email"]}",')
+                lines.append('    ),')
+            lines.append('  ),')
+
+        abstract = d.get('abstract', '')
+        if abstract:
+            lines.append(f'  abstract: [{_escape_typst(abstract)}],')
+
+        keywords = d.get('keywords', [])
+        if keywords:
+            kw_str = ', '.join(f'"{_escape_typst(k)}"' for k in keywords)
+            lines.append(f'  keywords: ({kw_str}),')
+
+        lines.append('  date: datetime.today(),')
+        lines.append(')')
+
+    lines.append('')
+
+    # 正文 sections
+    for section in d.get('sections', []):
+        lines.extend(_render_academic_section(section, level=1))
+
+    return '\n'.join(lines)
+
+
+def _render_academic_section(section: Dict, level: int = 1) -> List[str]:
+    """递归渲染学术论文的 section"""
+    lines = []
+    stype = section.get('type', 'paragraph')
+
+    if stype == 'heading':
+        prefix = '=' * level
+        title = _escape_typst(section.get('title', ''))
+        lines.append(f'{prefix} {title}')
+        lines.append('')
+        for child in section.get('children', []):
+            lines.extend(_render_academic_section(child, level=level + 1))
+    elif stype == 'paragraph':
+        text = _escape_typst(section.get('content', ''))
+        lines.append(text)
+        lines.append('')
+    elif stype == 'quote':
+        text = _escape_typst(section.get('content', ''))
+        lines.append(f'#quote[{text}]')
+        lines.append('')
+    elif stype == 'table':
+        headers = section.get('headers', [])
+        rows = section.get('rows', [])
+        if headers:
+            cols = len(headers)
+            lines.append(f'#figure(')
+            lines.append(f'  table(')
+            lines.append(f'    columns: {cols},')
+            lines.append(f'    table.header{tuple(_escape_typst(h) for h in headers)},')
+            for row in rows:
+                cells = ', '.join(f'[{_escape_typst(c)}]' for c in row)
+                lines.append(f'    {cells},')
+            lines.append(f'  ),')
+            caption = section.get('caption', '')
+            if caption:
+                lines.append(f'  caption: [{_escape_typst(caption)}],')
+            lines.append(f')')
+            lines.append('')
+
+    return lines
+
+
 def render_pdf(data: Dict, output: str, template: str = 'default',
                theme: str = 'cicc') -> str:
     """
@@ -472,6 +767,59 @@ def render_pdf(data: Dict, output: str, template: str = 'default',
 
     # 使用临时目录存放中间文件
     with tempfile.TemporaryDirectory(prefix='typeset_pdf_') as work_dir:
+
+        if theme in ('ieee', 'cn-paper', 'working-paper'):
+            # ── 学术论文模式 ──
+            typ_content = _generate_academic_typ(data, theme)
+            ac_dir = os.path.join('/app', 'output', '_academic_tmp')
+            os.makedirs(ac_dir, exist_ok=True)
+            typ_path = os.path.join(ac_dir, 'paper.typ')
+            with open(typ_path, 'w', encoding='utf-8') as f:
+                f.write(typ_content)
+
+            result = subprocess.run(
+                ['typst', 'compile', '--root', '/app', typ_path, output],
+                capture_output=True, text=True, timeout=60,
+            )
+            try:
+                os.unlink(typ_path)
+            except OSError:
+                pass
+
+            if result.returncode != 0:
+                raise RuntimeError(f"Typst compile failed:\n{result.stderr}")
+
+            print(f"  Academic PDF ({theme}) generated: {output} ({os.path.getsize(output):,} bytes)")
+            return output
+
+        if theme == 'gongwen':
+            # ── 公文模式：使用 gongwen.typ 模板 ──
+            typ_content = _generate_gongwen_typ(data)
+            # 必须在 /app 目录树内，typst --root /app 才能解析 import
+            gw_dir = os.path.join('/app', 'output', '_gongwen_tmp')
+            os.makedirs(gw_dir, exist_ok=True)
+            typ_path = os.path.join(gw_dir, 'report.typ')
+            with open(typ_path, 'w', encoding='utf-8') as f:
+                f.write(typ_content)
+
+            # typst compile（--root /app 以解析 /app/templates/ 路径）
+            result = subprocess.run(
+                ['typst', 'compile', '--root', '/app', typ_path, output],
+                capture_output=True, text=True, timeout=60,
+            )
+            # 清理临时文件
+            try:
+                os.unlink(typ_path)
+            except OSError:
+                pass
+
+            if result.returncode != 0:
+                raise RuntimeError(f"Typst compile failed:\n{result.stderr}")
+
+            print(f"  Gongwen PDF generated: {output} ({os.path.getsize(output):,} bytes)")
+            return output
+
+        # ── 研报模式（cicc/ms/cms/dachen）──
         # 1. 生成图表
         chart_paths = _generate_charts(data, work_dir, theme)
         print(f"  Charts generated: {len(chart_paths)}")
@@ -508,7 +856,8 @@ if __name__ == '__main__':
     @click.option('--data', required=True, help='Input JSON data file')
     @click.option('--output', required=True, help='Output PDF path')
     @click.option('--theme', default='cicc',
-                  type=click.Choice(['cicc', 'ms', 'cms', 'dachen']))
+                  type=click.Choice(['cicc', 'ms', 'cms', 'dachen', 'gongwen',
+                                     'ieee', 'cn-paper', 'working-paper']))
     def main(data, output, theme):
         with open(data) as f:
             d = json.load(f)

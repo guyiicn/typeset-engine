@@ -34,12 +34,19 @@ RUN pip install --no-cache-dir \
     python-dotenv \
     || echo "Some packages may have warnings, continuing"
 
-# Chrome 系统依赖 + 中文字体 + FFmpeg（视频合成）
+# Chrome 系统依赖 + 中文字体 + 公文字体 + FFmpeg
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libnss3 libatk-bridge2.0-0 libcups2 libxcomposite1 libxdamage1 \
     libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 \
     libcairo2 libasound2 \
     fonts-noto-cjk \
+    fonts-arphic-ukai \
+    fonts-arphic-uming \
+    fonts-cwtex-fs \
+    fonts-cwtex-heib \
+    fonts-cwtex-kai \
+    fonts-cwtex-ming \
+    fonts-liberation \
     ffmpeg \
     && apt-get clean && rm -rf /var/lib/apt/lists/* \
     && fc-cache -fv
@@ -58,6 +65,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl xz-utils \
 # 复制项目文件
 # ═══════════════════════════════════════════
 COPY . /app/
+
+# 安装项目自带字体（方正仿宋等）
+RUN if [ -d /app/fonts ] && ls /app/fonts/*.ttf 1>/dev/null 2>&1; then \
+        cp /app/fonts/*.ttf /usr/local/share/fonts/ && fc-cache -fv; \
+    fi
 
 # 注册字体到 matplotlib
 RUN python -c "\
