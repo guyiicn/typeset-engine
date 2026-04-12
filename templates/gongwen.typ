@@ -58,6 +58,7 @@
     lang: "zh",
     region: "cn",
     fill: gw-black,
+    cjk-latin-spacing: none,
   )
   set par(
     justify: true,
@@ -148,6 +149,7 @@
       font: font-xiaobiaosong,
       weight: "bold",
       fill: gw-black,
+      cjk-latin-spacing: none,
     )[#title]
   ]
   v(4mm)
@@ -316,7 +318,7 @@
 
     // 正文（重置缩进，确保段落首行缩进 2 字符）
     #set par(first-line-indent: 2em, justify: true, leading: 0.8em)
-    #set text(size: gw-size-sanhao, font: font-fangsong, fill: gw-black)
+    #set text(size: gw-size-sanhao, font: font-fangsong, fill: gw-black, cjk-latin-spacing: none)
     #body
 
     // 附件
