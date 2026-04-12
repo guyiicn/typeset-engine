@@ -38,14 +38,11 @@
     margin: (top: 37mm, bottom: 35mm, left: 28mm, right: 26mm),
     header: none,
     footer: context {
-      let pg = counter(page).get().first()
-      if pg > 1 {
-        align(center)[
-          #text(size: gw-size-sihao, font: font-fangsong)[
-            ～ #counter(page).display() ～
-          ]
+      align(center)[
+        #text(size: gw-size-sihao, font: font-fangsong)[
+          ～ #counter(page).display() ～
         ]
-      }
+      ]
     },
   )
 }
@@ -74,7 +71,7 @@
   doc-type: "文件",
   font-size: 30pt,
 ) = {
-  v(10mm)
+  v(6mm)
   align(center)[
     #set par(first-line-indent: 0em)
     #text(
@@ -97,10 +94,10 @@
       )[#doc-type]
     ]
   }
-  v(8mm)
+  v(5mm)
   // 红色分隔线（版心宽度，2pt粗）
   line(length: 100%, stroke: 2pt + gw-rule)
-  v(2mm)
+  v(1mm)
 }
 
 // ── 发文字号 + 签发人 ───────────────────────────────────────
@@ -141,7 +138,7 @@
 // 红线下方空二行，标题用二号方正小标宋
 #let gw-title(title: "") = {
   set par(first-line-indent: 0em)
-  v(6mm)
+  v(4mm)
   align(center)[
     #set par(first-line-indent: 0em)
     #text(
@@ -152,15 +149,15 @@
       cjk-latin-spacing: none,
     )[#title]
   ]
-  v(4mm)
+  v(2mm)
 }
 
 // ── 主送机关 ────────────────────────────────────────────────
 #let gw-recipient(to: "") = {
   if to != "" {
     set par(first-line-indent: 0em)
-    text(size: gw-size-sanhao, font: font-fangsong)[#to：]
-    v(2mm)
+    text(size: gw-size-sanhao, font: font-fangsong, cjk-latin-spacing: none)[#to：]
+    v(1mm)
   }
 }
 
@@ -168,7 +165,7 @@
 // 格式："附　件：1. 附件名称" （附和件之间全角空格）
 #let gw-attachments(items: ()) = {
   if items.len() > 0 {
-    v(6mm)
+    v(4mm)
     set par(first-line-indent: 0em)
     if items.len() == 1 {
       text(size: gw-size-sanhao, font: font-fangsong)[附#h(1em)件：#items.at(0)]
@@ -190,7 +187,7 @@
   organ: "",
   date: "",
 ) = {
-  v(10mm)
+  v(8mm)
   set par(first-line-indent: 0em)
   align(right)[
     #pad(right: 2em)[
@@ -297,8 +294,8 @@
 
   set document(title: title, author: organ)
 
-  // ── 首页（无页码）──
-  page(footer: none)[
+  // ── 首页 ──
+  page()[
     // 红头
     #redhead(organ: organ, doc-type: doc-type, font-size: redhead-size)
 
