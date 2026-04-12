@@ -60,6 +60,13 @@ THEMES = {
         'serif_body': True,
         'label': '党政公文 GB/T 9704',
     },
+    'tbs': {
+        'accent': '#e60012',
+        'heading': '#000000',
+        'serif_body': True,
+        'label': '电广传媒 TBS',
+        # 预设：organ=湖南电广传媒股份有限公司, doc_type="", redhead_size=36
+    },
     'ieee': {
         'accent': '#000000',
         'heading': '#000000',
@@ -797,8 +804,14 @@ def render_pdf(data: Dict, output: str, template: str = 'default',
             print(f"  Academic PDF ({theme}) generated: {output} ({os.path.getsize(output):,} bytes)")
             return output
 
-        if theme == 'gongwen':
+        if theme in ('gongwen', 'tbs'):
             # ── 公文模式：使用 gongwen.typ 模板 ──
+            if theme == 'tbs':
+                # 电广传媒预设
+                data.setdefault('organ', '湖南电广传媒股份有限公司')
+                data.setdefault('doc_type', '')
+                data.setdefault('redhead_size', 36)
+                data.setdefault('signature_organ', '湖南电广传媒股份有限公司')
             typ_content = _generate_gongwen_typ(data)
             # 必须在 /app 目录树内，typst --root /app 才能解析 import
             gw_dir = os.path.join('/app', 'output', '_gongwen_tmp')
@@ -861,7 +874,7 @@ if __name__ == '__main__':
     @click.option('--data', required=True, help='Input JSON data file')
     @click.option('--output', required=True, help='Output PDF path')
     @click.option('--theme', default='cicc',
-                  type=click.Choice(['cicc', 'ms', 'cms', 'dachen', 'gongwen',
+                  type=click.Choice(['cicc', 'ms', 'cms', 'dachen', 'gongwen', 'tbs',
                                      'ieee', 'cn-paper', 'working-paper']))
     def main(data, output, theme):
         with open(data) as f:

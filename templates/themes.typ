@@ -114,6 +114,28 @@
   serif-body: true,                 // 仿宋正文
 )
 
+// ── Theme: 电广传媒 TBS (TV & Broadcast) ────────────────────
+#let theme-tbs = (
+  name: "tbs",
+  label: "电广传媒 TBS",
+  primary: rgb("#e60012"),          // 公文红
+  accent: rgb("#e60012"),
+  text-primary: rgb("#000000"),
+  text-body: rgb("#000000"),
+  text-secondary: rgb("#333333"),
+  table-header-bg: rgb("#000000"),
+  table-header-fg: white,
+  table-alt-row: rgb("#f5f5f5"),
+  quote-border: rgb("#000000"),
+  quote-bg: rgb("#f5f5f5"),
+  cover-bg: white,
+  cover-fg: rgb("#000000"),
+  heading-rule-full: false,
+  heading-rule-partial: 0,
+  table-style: "full-border",
+  serif-body: true,
+)
+
 // ── Theme Registry ──────────────────────────────────────────
 #let themes = (
   cicc: theme-cicc,
@@ -121,6 +143,7 @@
   cms: theme-cms,
   dachen: theme-dachen,
   gongwen: theme-gongwen,
+  tbs: theme-tbs,
 )
 
 // ── Helper: Get theme by name ───────────────────────────────
