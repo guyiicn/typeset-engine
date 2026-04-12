@@ -72,6 +72,24 @@ THEMES = {
         'serif_body': False,
         'label': 'Technical Whitepaper',
     },
+    'mckinsey': {
+        'accent': '#009FDA',
+        'heading': '#00205B',
+        'serif_body': False,
+        'label': 'McKinsey & Company',
+    },
+    'bcg': {
+        'accent': '#6CC24A',
+        'heading': '#2D2D2D',
+        'serif_body': False,
+        'label': 'Boston Consulting Group',
+    },
+    'bain': {
+        'accent': '#D4A843',
+        'heading': '#333333',
+        'serif_body': True,
+        'label': 'Bain & Company',
+    },
     'gongwen': {
         'accent': '#e60012',
         'heading': '#000000',
@@ -903,6 +921,7 @@ if __name__ == '__main__':
     @click.option('--output', required=True, help='Output PDF path')
     @click.option('--theme', default='cicc',
                   type=click.Choice(['cicc', 'ms', 'cms', 'dachen', 'goldman', 'ubs', 'whitepaper',
+                                     'mckinsey', 'bcg', 'bain',
                                      'gongwen', 'tbs', 'ieee', 'cn-paper', 'working-paper']))
     def main(data, output, theme):
         with open(data) as f:

@@ -205,6 +205,75 @@
   serif-body: false,                // Sans-serif 正文
 )
 
+// ── Theme: McKinsey 麦肯锡 ──────────────────────────────────
+// 极简大留白，深蓝品牌色，Sans-serif 正文，无装饰线
+#let theme-mckinsey = (
+  name: "mckinsey",
+  label: "McKinsey & Company",
+  primary: rgb("#00205B"),
+  accent: rgb("#009FDA"),
+  text-primary: rgb("#00205B"),
+  text-body: rgb("#333333"),
+  text-secondary: rgb("#666666"),
+  table-header-bg: rgb("#00205B"),
+  table-header-fg: white,
+  table-alt-row: rgb("#F0F4F8"),
+  quote-border: rgb("#009FDA"),
+  quote-bg: rgb("#E8F4FD"),
+  cover-bg: rgb("#00205B"),
+  cover-fg: white,
+  heading-rule-full: false,
+  heading-rule-partial: 0,
+  table-style: "horizontal-only",
+  serif-body: false,
+)
+
+// ── Theme: BCG 波士顿咨询 ──────────────────────────────────
+// 绿色品牌色，现代专业，Sans-serif
+#let theme-bcg = (
+  name: "bcg",
+  label: "Boston Consulting Group",
+  primary: rgb("#00645A"),
+  accent: rgb("#6CC24A"),
+  text-primary: rgb("#2D2D2D"),
+  text-body: rgb("#333333"),
+  text-secondary: rgb("#666666"),
+  table-header-bg: rgb("#00645A"),
+  table-header-fg: white,
+  table-alt-row: rgb("#F0F7F5"),
+  quote-border: rgb("#00645A"),
+  quote-bg: rgb("#E8F5E9"),
+  cover-bg: rgb("#00645A"),
+  cover-fg: white,
+  heading-rule-full: true,
+  heading-rule-partial: 0.4,
+  table-style: "horizontal-only",
+  serif-body: false,
+)
+
+// ── Theme: Bain 贝恩咨询 ───────────────────────────────────
+// 红色品牌色，红黑配色，衬线正文
+#let theme-bain = (
+  name: "bain",
+  label: "Bain & Company",
+  primary: rgb("#CC0000"),
+  accent: rgb("#D4A843"),
+  text-primary: rgb("#333333"),
+  text-body: rgb("#333333"),
+  text-secondary: rgb("#666666"),
+  table-header-bg: rgb("#CC0000"),
+  table-header-fg: white,
+  table-alt-row: rgb("#FDF5F5"),
+  quote-border: rgb("#CC0000"),
+  quote-bg: rgb("#FDF5F5"),
+  cover-bg: rgb("#CC0000"),
+  cover-fg: white,
+  heading-rule-full: true,
+  heading-rule-partial: 0.5,
+  table-style: "full-border",
+  serif-body: true,
+)
+
 // ── Theme Registry ──────────────────────────────────────────
 #let themes = (
   cicc: theme-cicc,
@@ -216,6 +285,9 @@
   goldman: theme-goldman,
   ubs: theme-ubs,
   whitepaper: theme-whitepaper,
+  mckinsey: theme-mckinsey,
+  bcg: theme-bcg,
+  bain: theme-bain,
 )
 
 // ── Helper: Get theme by name ───────────────────────────────
