@@ -76,23 +76,25 @@
 ) = {
   v(10mm)
   align(center)[
+    #set par(first-line-indent: 0em)
     #text(
       size: font-size,
       font: font-xiaobiaosong,
       fill: gw-red,
       weight: "bold",
-      tracking: 4pt,
+      tracking: 2pt,
     )[#organ]
   ]
   if doc-type != "" {
     v(2mm)
     align(center)[
+      #set par(first-line-indent: 0em)
       #text(
         size: font-size * 0.7,
         font: font-xiaobiaosong,
         fill: gw-red,
         weight: "bold",
-        tracking: 8pt,
+        tracking: 4pt,
       )[#doc-type]
     ]
   }
@@ -142,9 +144,10 @@
   set par(first-line-indent: 0em)
   v(6mm)
   align(center)[
+    #set par(first-line-indent: 0em)
     #text(
       size: 22pt,   // 二号字
-      font: font-xiaobiaosong,
+      font: font-heiti,
       weight: "bold",
       fill: gw-black,
     )[#title]
@@ -171,10 +174,10 @@
       text(size: gw-size-sanhao, font: font-fangsong)[附#h(1em)件：#items.at(0)]
     } else {
       text(size: gw-size-sanhao, font: font-fangsong)[附#h(1em)件：]
-      let idx = 1
-      for item in items {
+      let idx = 0
+      while idx < items.len() {
         v(1mm)
-        text(size: gw-size-sanhao, font: font-fangsong)[#h(4em)#{ idx }.#item]
+        text(size: gw-size-sanhao, font: font-fangsong)[#h(4em)#{ idx + 1 }.#items.at(idx)]
         idx = idx + 1
       }
     }

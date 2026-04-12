@@ -569,8 +569,9 @@ def _generate_gongwen_typ(data: Dict) -> str:
     if d.get('signature_date'):
         lines.append(f'  signature-date: "{_escape_typst(d["signature_date"])}",')
     if d.get('attachments'):
+        # Typst 数组：单元素需要尾逗号 ("item",)，否则被当成字符串
         att_items = ', '.join(f'"{_escape_typst(a)}"' for a in d['attachments'])
-        lines.append(f'  attachments: ({att_items}),')
+        lines.append(f'  attachments: ({att_items},),')
     if d.get('cc'):
         lines.append(f'  cc: "{_escape_typst(d["cc"])}",')
     if d.get('printer'):
