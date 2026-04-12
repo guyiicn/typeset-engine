@@ -66,9 +66,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl xz-utils \
 # ═══════════════════════════════════════════
 COPY . /app/
 
-# 安装项目自带字体（方正仿宋等）
-RUN if [ -d /app/fonts ] && ls /app/fonts/*.ttf 1>/dev/null 2>&1; then \
-        cp /app/fonts/*.ttf /usr/local/share/fonts/ && fc-cache -fv; \
+# 安装项目自带字体（方正小标宋、SimHei、仿宋等）
+RUN if [ -d /app/fonts ]; then \
+        cp /app/fonts/*.ttf /app/fonts/*.TTF /app/fonts/*.TTC /app/fonts/*.otf \
+           /usr/local/share/fonts/ 2>/dev/null; \
+        fc-cache -fv; \
     fi
 
 # 注册字体到 matplotlib

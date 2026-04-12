@@ -12,12 +12,11 @@
 // ═══════════════════════════════════════════════════════════════
 
 // ── 字体定义 ────────────────────────────────────────────────
-#let font-fangsong = ("FZFangSong-Z02", "cwTeXFangSong", "Noto Serif CJK SC")
-#let font-heiti = ("cwTeXHeiBold", "Noto Sans CJK SC")
+#let font-fangsong = ("FangSong", "FZFangSong-Z02", "cwTeXFangSong", "Noto Serif CJK SC")
+#let font-heiti = ("SimHei", "cwTeXHeiBold", "Noto Sans CJK SC")
 #let font-kaiti = ("cwTeXKai", "AR PL UKai CN", "Noto Serif CJK SC")
 #let font-songti = ("cwTeXMing", "AR PL UMing CN", "Noto Serif CJK SC")
-// 小标宋替代：用 Noto Serif CJK SC Bold（正式公文应使用方正小标宋体）
-#let font-xiaobiaosong = ("Noto Serif CJK SC",)
+#let font-xiaobiaosong = ("FZXiaoBiaoSong-B05", "Noto Serif CJK SC")
 
 // ── 颜色定义 ────────────────────────────────────────────────
 #let gw-red = rgb("#e60012")        // 公文红（红头、五角星）
