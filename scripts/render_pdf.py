@@ -54,6 +54,24 @@ THEMES = {
         'serif_body': True,
         'label': '达晨财智 Fortune Capital',
     },
+    'goldman': {
+        'accent': '#6CACE4',
+        'heading': '#003A70',
+        'serif_body': False,
+        'label': 'Goldman Sachs',
+    },
+    'ubs': {
+        'accent': '#E60000',
+        'heading': '#333333',
+        'serif_body': True,
+        'label': 'UBS',
+    },
+    'whitepaper': {
+        'accent': '#3498DB',
+        'heading': '#2C3E50',
+        'serif_body': False,
+        'label': 'Technical Whitepaper',
+    },
     'gongwen': {
         'accent': '#e60012',
         'heading': '#000000',
@@ -884,8 +902,8 @@ if __name__ == '__main__':
     @click.option('--data', required=True, help='Input JSON data file')
     @click.option('--output', required=True, help='Output PDF path')
     @click.option('--theme', default='cicc',
-                  type=click.Choice(['cicc', 'ms', 'cms', 'dachen', 'gongwen', 'tbs',
-                                     'ieee', 'cn-paper', 'working-paper']))
+                  type=click.Choice(['cicc', 'ms', 'cms', 'dachen', 'goldman', 'ubs', 'whitepaper',
+                                     'gongwen', 'tbs', 'ieee', 'cn-paper', 'working-paper']))
     def main(data, output, theme):
         with open(data) as f:
             d = json.load(f)

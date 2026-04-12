@@ -136,6 +136,75 @@
   serif-body: true,
 )
 
+// ── Theme: Goldman Sachs ────────────────────────────────────
+// 极简蓝白专业风，仅水平线表格，Sans-serif 正文
+#let theme-goldman = (
+  name: "goldman",
+  label: "Goldman Sachs",
+  primary: rgb("#003A70"),          // GS 深蓝
+  accent: rgb("#6CACE4"),           // GS 浅蓝
+  text-primary: rgb("#003A70"),     // 标题深蓝
+  text-body: rgb("#333333"),        // 正文深灰
+  text-secondary: rgb("#7F8C8D"),   // 辅助灰
+  table-header-bg: rgb("#003A70"),
+  table-header-fg: white,
+  table-alt-row: rgb("#F0F4F8"),    // 极浅蓝灰交替行
+  quote-border: rgb("#6CACE4"),
+  quote-bg: rgb("#EBF5FB"),
+  cover-bg: rgb("#003A70"),         // 深蓝封面
+  cover-fg: white,
+  heading-rule-full: true,
+  heading-rule-partial: 0.3,        // H2 短线（简约）
+  table-style: "horizontal-only",   // GS 标志性：仅水平线
+  serif-body: false,                // Sans-serif 正文
+)
+
+// ── Theme: UBS ─────────────────────────────────────────────
+// 红黑撞色，白底封面+红色装饰条，衬线正文
+#let theme-ubs = (
+  name: "ubs",
+  label: "UBS",
+  primary: rgb("#E60000"),          // UBS 红
+  accent: rgb("#333333"),           // 黑色辅助
+  text-primary: rgb("#333333"),     // 标题黑色
+  text-body: rgb("#333333"),        // 正文色
+  text-secondary: rgb("#666666"),
+  table-header-bg: rgb("#E60000"),  // 红色表头
+  table-header-fg: white,
+  table-alt-row: rgb("#FDF2F2"),    // 浅粉交替行
+  quote-border: rgb("#E60000"),
+  quote-bg: rgb("#FDF2F2"),
+  cover-bg: white,                  // 白底 + 红色装饰带
+  cover-fg: rgb("#333333"),
+  heading-rule-full: true,
+  heading-rule-partial: 0.5,
+  table-style: "full-border",
+  serif-body: true,                 // 衬线正文
+)
+
+// ── Theme: Whitepaper 技术白皮书 ────────────────────────────
+// 无品牌色，蓝灰专业色调，适合技术白皮书/开源项目
+#let theme-whitepaper = (
+  name: "whitepaper",
+  label: "Technical Whitepaper",
+  primary: rgb("#2C3E50"),          // 深灰蓝
+  accent: rgb("#3498DB"),           // 专业蓝
+  text-primary: rgb("#2C3E50"),     // 标题深灰蓝
+  text-body: rgb("#34495E"),        // 正文色
+  text-secondary: rgb("#7F8C8D"),   // 辅助灰
+  table-header-bg: rgb("#2C3E50"),
+  table-header-fg: white,
+  table-alt-row: rgb("#F8F9FA"),    // 极浅灰
+  quote-border: rgb("#3498DB"),
+  quote-bg: rgb("#EBF5FB"),
+  cover-bg: rgb("#2C3E50"),         // 深灰蓝封面
+  cover-fg: white,
+  heading-rule-full: true,
+  heading-rule-partial: 0.5,
+  table-style: "horizontal-only",   // 简约水平线
+  serif-body: false,                // Sans-serif 正文
+)
+
 // ── Theme Registry ──────────────────────────────────────────
 #let themes = (
   cicc: theme-cicc,
@@ -144,6 +213,9 @@
   dachen: theme-dachen,
   gongwen: theme-gongwen,
   tbs: theme-tbs,
+  goldman: theme-goldman,
+  ubs: theme-ubs,
+  whitepaper: theme-whitepaper,
 )
 
 // ── Helper: Get theme by name ───────────────────────────────
