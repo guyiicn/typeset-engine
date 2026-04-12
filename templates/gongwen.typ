@@ -81,7 +81,6 @@
       font: font-xiaobiaosong,
       fill: gw-red,
       weight: "bold",
-      tracking: 2pt,
     )[#organ]
   ]
   if doc-type != "" {
@@ -146,7 +145,7 @@
     #set par(first-line-indent: 0em)
     #text(
       size: 22pt,   // 二号字
-      font: font-heiti,
+      font: font-xiaobiaosong,
       weight: "bold",
       fill: gw-black,
     )[#title]
