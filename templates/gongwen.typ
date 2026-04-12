@@ -35,7 +35,7 @@
 #let gongwen-page-setup() = {
   set page(
     paper: "a4",
-    margin: (top: 37mm, bottom: 35mm, left: 28mm, right: 28mm),
+    margin: (top: 37mm, bottom: 35mm, left: 31mm, right: 31mm),
     header: none,
     footer: context {
       set text(size: gw-size-sihao, font: font-fangsong)
