@@ -515,7 +515,7 @@ def _generate_gongwen_typ(data: Dict) -> str:
     lines.append('#import "/templates/gongwen.typ": *')
     lines.append('')
     lines.append('#set page(paper: "a4", margin: (top: 37mm, bottom: 35mm, left: 28mm, right: 26mm),')
-    lines.append('  footer: context { set text(size: 14pt); align(center)[～ #counter(page).display() ～] })')
+    lines.append('  footer: context { set text(size: 14pt); align(right)[～ #counter(page).display() ～] })')
     lines.append('')
 
     # 正文内容先生成
