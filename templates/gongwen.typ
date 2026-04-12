@@ -71,33 +71,35 @@
   doc-type: "文件",
   font-size: 30pt,
 ) = {
-  v(6mm)
-  align(center)[
-    #set par(first-line-indent: 0em)
-    #text(
-      size: font-size,
-      font: font-xiaobiaosong,
-      fill: gw-red,
-      weight: "bold",
-    )[#organ]
-  ]
-  if doc-type != "" {
-    v(2mm)
-    align(center)[
-      #set par(first-line-indent: 0em)
+  block(spacing: 0pt)[
+    #align(center)[
+      #set par(first-line-indent: 0em, spacing: 0pt)
       #text(
-        size: font-size * 0.7,
+        size: font-size,
         font: font-xiaobiaosong,
         fill: gw-red,
         weight: "bold",
-        tracking: 4pt,
-      )[#doc-type]
+      )[#organ]
+    ]
+  ]
+  if doc-type != "" {
+    v(1mm)
+    block(spacing: 0pt)[
+      #align(center)[
+        #set par(first-line-indent: 0em, spacing: 0pt)
+        #text(
+          size: font-size * 0.7,
+          font: font-xiaobiaosong,
+          fill: gw-red,
+          weight: "bold",
+          tracking: 4pt,
+        )[#doc-type]
+      ]
     ]
   }
-  v(5mm)
-  // 红色分隔线（版心宽度，2pt粗）
+  v(2mm)
   line(length: 100%, stroke: 2pt + gw-rule)
-  v(1mm)
+  v(12mm)
 }
 
 // ── 发文字号 + 签发人 ───────────────────────────────────────
@@ -137,19 +139,20 @@
 // ── 公文标题 ────────────────────────────────────────────────
 // 红线下方空二行，标题用二号方正小标宋
 #let gw-title(title: "") = {
-  set par(first-line-indent: 0em)
-  v(4mm)
-  align(center)[
-    #set par(first-line-indent: 0em)
-    #text(
-      size: 22pt,   // 二号字
-      font: font-xiaobiaosong,
-      weight: "bold",
-      fill: gw-black,
-      cjk-latin-spacing: none,
-    )[#title]
-  ]
   v(2mm)
+  block(spacing: 0pt)[
+    #align(center)[
+      #set par(first-line-indent: 0em, spacing: 0pt)
+      #text(
+        size: 22pt,   // 二号字
+        font: font-xiaobiaosong,
+        weight: "bold",
+        fill: gw-black,
+        cjk-latin-spacing: none,
+      )[#title]
+    ]
+  ]
+  v(6mm)
 }
 
 // ── 主送机关 ────────────────────────────────────────────────
@@ -157,7 +160,6 @@
   if to != "" {
     set par(first-line-indent: 0em)
     text(size: gw-size-sanhao, font: font-fangsong, cjk-latin-spacing: none)[#to：]
-    v(1mm)
   }
 }
 
