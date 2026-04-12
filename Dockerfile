@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     poppler-utils \
     imagemagick \
     diffutils \
+    librsvg2-bin \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && fc-cache -fv 2>/dev/null || true

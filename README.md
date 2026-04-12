@@ -34,6 +34,7 @@ curl http://localhost:9090/health
 | **pptx** | `POST /render/pptx` | 幻灯片 JSON | PPTX 文件 | 否 |
 | **chart** | `POST /render/chart` | 图表 JSON | PNG 图片 | 否 |
 | **pptx-ai** | `POST /render/pptx-ai` | slides_plan JSON | ZIP（图片+HTML+MP4） | 是 |
+| **diagram** | `POST /render/diagram` | SVG 字符串 | PNG 图片 | 否 |
 | **illustrate** | `POST /render/illustrate` | 文本+风格 | PNG 图片 | 是 |
 | **styles** | `GET /styles` | — | 风格列表 JSON | 否 |
 | **capabilities** | `GET /capabilities` | — | 全部命令描述 JSON | 否 |
@@ -69,6 +70,29 @@ curl -X POST http://localhost:9090/render/chart \
   -d '{"type":"bar","theme":"cicc","data":{"title":"营收","categories":["Q1","Q2","Q3"],"series":[{"name":"收入","values":[100,120,150]}]}}' \
   -o chart.png
 ```
+
+### 渲染技术架构图（SVG → PNG）
+
+```bash
+# 基本用法：SVG 字符串 → 1920px PNG
+curl -X POST http://localhost:9090/render/diagram \
+  -H "Content-Type: application/json" \
+  -d '{"svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 960 600\"><rect width=\"960\" height=\"600\" fill=\"#fff\"/><text x=\"480\" y=\"300\" text-anchor=\"middle\" font-size=\"24\">Hello Diagram</text></svg>", "width": 1920}' \
+  -o diagram.png
+
+# 仅校验 SVG 语法
+curl -X POST http://localhost:9090/render/diagram \
+  -H "Content-Type: application/json" \
+  -d '{"svg": "<svg>...</svg>", "validate": true}'
+
+# 同时输出 SVG + PNG
+curl -X POST http://localhost:9090/render/diagram \
+  -H "Content-Type: application/json" \
+  -d '{"svg": "...", "format": "both"}' \
+  -o diagram.png
+```
+
+参数：`svg`（必填）、`width`（默认 1920）、`format`（png/svg/both）、`validate`（true=仅校验）
 
 ### 生成 AI 配图
 
@@ -395,6 +419,7 @@ typeset-engine/
 │   ├── render_docx.py     ← DOCX（python-docx）
 │   ├── render_charts.py   ← 13 种图表（Plotly）
 │   ├── render_illustrate.py ← AI 配图（Gemini）
+│   ├── render_diagram.py  ← 技术架构图（SVG→PNG, rsvg-convert）
 │   └── file_diff.py       ← 文件对比
 ├── styles/
 │   ├── gradient-glass.md

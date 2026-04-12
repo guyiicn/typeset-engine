@@ -91,6 +91,10 @@ class TypesetHandler(BaseHTTPRequestHandler):
                                         'heatmap', 'radar', 'funnel', 'gauge', 'treemap',
                                         'candlestick', 'combo'],
                               'themes': ['default', 'cicc', 'goldman', 'dark']},
+                    'diagram': {'method': 'POST', 'path': '/render/diagram',
+                               'description': 'SVG technical diagram → PNG (via rsvg-convert)',
+                               'params': {'svg': 'SVG string (required)', 'width': 'PNG width (default 1920)',
+                                          'format': 'png|svg|both', 'validate': 'true = validate only'}},
                     'illustrate': {'method': 'POST', 'path': '/render/illustrate', 'requires': 'GEMINI_API_KEY',
                                    'styles': ['gradient-glass', 'vector-illustration', 'ticket']},
                 },
@@ -124,6 +128,8 @@ class TypesetHandler(BaseHTTPRequestHandler):
                 self._handle_pptx_ai(data, params)
             elif path == '/render/chart':
                 self._handle_chart(data, params)
+            elif path == '/render/diagram':
+                self._handle_diagram(data, params)
             elif path == '/render/illustrate':
                 self._handle_illustrate(data, params)
             else:
@@ -212,6 +218,40 @@ class TypesetHandler(BaseHTTPRequestHandler):
         render_chart(chart_type, chart_data, out_path, theme)
         self._send_file(out_path, 'image/png')
         os.unlink(out_path)
+
+    def _handle_diagram(self, data, params):
+        from render_diagram import render_diagram, validate_svg
+
+        svg_content = data.get('svg', '')
+        if not svg_content:
+            self._send_error(400, 'Missing "svg" field in request body')
+            return
+
+        width = int(data.get('width', 1920))
+        fmt = data.get('format', 'png')  # png | svg | both
+        validate_only = data.get('validate', False)
+
+        # 仅校验模式
+        if validate_only:
+            result = validate_svg(svg_content)
+            self._send_json(result)
+            return
+
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False, dir=OUTPUT_DIR) as f:
+            out_base = f.name.rsplit('.', 1)[0]
+
+        out_path = render_diagram(svg_content, out_base + '.png', width=width, fmt=fmt)
+
+        if out_path.endswith('.svg'):
+            self._send_file(out_path, 'image/svg+xml')
+        else:
+            self._send_file(out_path, 'image/png')
+
+        # 清理
+        for ext in ['.png', '.svg']:
+            p = out_base + ext
+            if os.path.exists(p):
+                os.unlink(p)
 
     def _handle_illustrate(self, data, params):
         from render_illustrate import generate_illustration
