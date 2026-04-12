@@ -520,14 +520,15 @@ def _generate_gongwen_typ(data: Dict) -> str:
     for section in d.get('sections', []):
         stype = section.get('type', 'paragraph')
         if stype == 'paragraph':
-            text = _escape_typst(section.get('content', ''))
-            # 支持 \n\n 分段，\n 段内换行
-            for para in text.split('\\n\\n'):
+            raw_content = section.get('content', '')
+            # 支持 \n\n 分段（真正的换行符）
+            for para in raw_content.split('\n\n'):
                 para = para.strip()
                 if para:
-                    # 单个 \n → Typst 强制换行 \
-                    para = para.replace('\\n', ' \\\n')
-                    body_lines.append(f'{para}')
+                    # 单个 \n → Typst 强制换行 \（先处理换行，再转义）
+                    parts = para.split('\n')
+                    escaped_parts = [_escape_typst(p) for p in parts]
+                    body_lines.append(' \\\n'.join(escaped_parts))
                     body_lines.append('')
         elif stype == 'heading':
             title = _escape_typst(section.get('title', ''))
@@ -536,9 +537,10 @@ def _generate_gongwen_typ(data: Dict) -> str:
             for child in section.get('children', []):
                 ctype = child.get('type', 'paragraph')
                 if ctype == 'paragraph':
-                    text = _escape_typst(child.get('content', ''))
-                    text = text.replace('\\n', ' \\\n')
-                    body_lines.append(f'{text}')
+                    raw = child.get('content', '')
+                    parts = raw.split('\n')
+                    escaped_parts = [_escape_typst(p) for p in parts]
+                    body_lines.append(' \\\n'.join(escaped_parts))
                     body_lines.append('')
                 elif ctype == 'heading':
                     ctitle = _escape_typst(child.get('title', ''))
