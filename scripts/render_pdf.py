@@ -819,7 +819,7 @@ def render_pdf(data: Dict, output: str, template: str = 'default',
                 # 电广传媒预设
                 data.setdefault('organ', '湖南电广传媒股份有限公司')
                 data.setdefault('doc_type', '')
-                data.setdefault('redhead_size', 36)
+                data.setdefault('redhead_size', 32)
                 data.setdefault('signature_organ', '湖南电广传媒股份有限公司')
             typ_content = _generate_gongwen_typ(data)
             # 必须在 /app 目录树内，typst --root /app 才能解析 import

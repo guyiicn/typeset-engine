@@ -94,9 +94,9 @@
       ]
     ]
   }
-  v(8mm)
+  v(6mm)
   line(length: 100%, stroke: 2pt + gw-rule)
-  v(16mm)
+  v(6mm)
 }
 
 // ── 发文字号 + 签发人 ───────────────────────────────────────
@@ -149,7 +149,7 @@
       )[#title]
     ]
   ]
-  v(6mm)
+  v(8mm)
 }
 
 // ── 主送机关 ────────────────────────────────────────────────
@@ -157,6 +157,7 @@
   if to != "" {
     set par(first-line-indent: 0em)
     text(size: gw-size-sanhao, font: font-fangsong, cjk-latin-spacing: none)[#to：]
+    v(5mm)
   }
 }
 
