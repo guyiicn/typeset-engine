@@ -548,6 +548,8 @@ def _generate_gongwen_typ(data: Dict) -> str:
     lines.append('#show: gongwen.with(')
     lines.append(f'  organ: "{_escape_typst(d.get("organ", "XX机关"))}",')
     lines.append(f'  doc-type: "{_escape_typst(d.get("doc_type", "文件"))}",')
+    redhead_size = d.get('redhead_size', 30)
+    lines.append(f'  redhead-size: {redhead_size}pt,')
     if d.get('number'):
         lines.append(f'  number: "{_escape_typst(d["number"])}",')
     if d.get('signer'):
@@ -559,6 +561,9 @@ def _generate_gongwen_typ(data: Dict) -> str:
         lines.append(f'  signature-organ: "{_escape_typst(d["signature_organ"])}",')
     if d.get('signature_date'):
         lines.append(f'  signature-date: "{_escape_typst(d["signature_date"])}",')
+    if d.get('attachments'):
+        att_items = ', '.join(f'"{_escape_typst(a)}"' for a in d['attachments'])
+        lines.append(f'  attachments: ({att_items}),')
     if d.get('cc'):
         lines.append(f'  cc: "{_escape_typst(d["cc"])}",')
     if d.get('printer'):

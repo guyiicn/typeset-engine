@@ -43,7 +43,7 @@
       if pg > 1 {
         align(center)[
           #text(size: gw-size-sihao, font: font-fangsong)[
-            — #counter(page).display() —
+            ～ #counter(page).display() ～
           ]
         ]
       }
@@ -161,6 +161,27 @@
   }
 }
 
+// ── 附件列表 ────────────────────────────────────────────────
+// 格式："附　件：1. 附件名称" （附和件之间全角空格）
+#let gw-attachments(items: ()) = {
+  if items.len() > 0 {
+    v(6mm)
+    set par(first-line-indent: 0em)
+    if items.len() == 1 {
+      text(size: gw-size-sanhao, font: font-fangsong)[附#h(1em)件：#items.at(0)]
+    } else {
+      text(size: gw-size-sanhao, font: font-fangsong)[附#h(1em)件：]
+      let idx = 1
+      for item in items {
+        v(1mm)
+        text(size: gw-size-sanhao, font: font-fangsong)[#h(4em)#{ idx }.#item]
+        idx = idx + 1
+      }
+    }
+    v(4mm)
+  }
+}
+
 // ── 落款（发文机关署名 + 日期）──────────────────────────────
 #let gw-signature(
   organ: "",
@@ -256,6 +277,8 @@
   // 落款
   signature-organ: "",
   signature-date: "",
+  // 附件
+  attachments: (),
   // 附注
   cc: "",
   printer: "",
@@ -292,6 +315,9 @@
 
     // 正文
     #body
+
+    // 附件
+    #gw-attachments(items: attachments)
 
     // 落款
     #if signature-organ != "" or signature-date != "" {
