@@ -313,7 +313,9 @@
     // 主送机关
     #gw-recipient(to: recipient)
 
-    // 正文
+    // 正文（重置缩进，确保段落首行缩进 2 字符）
+    #set par(first-line-indent: 2em, justify: true, leading: 0.8em)
+    #set text(size: gw-size-sanhao, font: font-fangsong, fill: gw-black)
     #body
 
     // 附件
