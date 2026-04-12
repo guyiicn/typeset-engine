@@ -227,7 +227,7 @@
 
     if index-terms != () {
       parbreak()
-      [_Index Terms_---#h(weak: true, 0pt)#index-terms.join[, ]]
+      [_Index Terms_---#h(weak: true, 0pt)#index-terms.join(", ")]
     }
     v(2pt)
   }
