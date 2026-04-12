@@ -33,6 +33,7 @@ Accent glows (one per layer):
     <stop offset="50%"  stop-color="#161b22"/>
     <stop offset="100%" stop-color="#0d1117"/>
   </linearGradient>
+  <!-- Ambient glow spots -->
   <radialGradient id="glow-blue" cx="30%" cy="40%" r="40%">
     <stop offset="0%" stop-color="rgba(88,166,255,0.15)"/>
     <stop offset="100%" stop-color="rgba(88,166,255,0)"/>
@@ -59,9 +60,12 @@ SVG cannot do real backdrop-filter, so simulate with:
 </defs>
 
 <!-- Glass card: layered rects -->
+<!-- 1. Subtle inner shadow -->
 <rect rx="12" fill="rgba(255,255,255,0.03)" stroke="none"/>
+<!-- 2. Glass body -->
 <rect rx="12" fill="rgba(255,255,255,0.06)" 
       stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+<!-- 3. Top highlight line -->
 <line stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
 ```
 
@@ -96,6 +100,7 @@ font-weight: 400 normal, 600 semi-bold, 700 bold titles
     <polygon points="0 0, 8 3, 0 6" fill="#58a6ff"/>
   </marker>
 </defs>
+<!-- Slightly glowing line -->
 <path stroke="#58a6ff" stroke-width="1.5" fill="none"
       opacity="0.8" marker-end="url(#arrow-blue)"/>
 ```
@@ -106,6 +111,7 @@ font-weight: 400 normal, 600 semi-bold, 700 bold titles
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600"
      width="960" height="600">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     text { font-family: 'Inter', -apple-system, sans-serif; fill: #f0f6fc; }
   </style>
   <defs>
