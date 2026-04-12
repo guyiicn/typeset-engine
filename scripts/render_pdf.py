@@ -667,15 +667,16 @@ def _generate_academic_typ(data: Dict, template: str) -> str:
         lines.append(f'#import "{template_path}": *')
         lines.append('')
 
-        # cn-paper 用 easy-paper 的 show 函数
+        # cn-paper 用 project() 函数
         title = _escape_typst(d.get('title', '论文标题'))
-        lines.append(f'#show: easy-paper.with(')
+        lines.append(f'#show: project.with(')
         lines.append(f'  title: "{title}",')
 
         authors = d.get('authors', [])
         if authors:
-            author_names = ', '.join(f'"{_escape_typst(a.get("name", ""))}"' for a in authors)
-            lines.append(f'  author: ({author_names}),')
+            # project 的 author 参数接受字符串，用逗号分隔多作者
+            author_str = '、'.join(_escape_typst(a.get('name', '')) for a in authors)
+            lines.append(f'  author: "{author_str}",')
 
         abstract = d.get('abstract', '')
         if abstract:
@@ -684,7 +685,7 @@ def _generate_academic_typ(data: Dict, template: str) -> str:
         keywords = d.get('keywords', [])
         if keywords:
             kw_str = ', '.join(f'"{_escape_typst(k)}"' for k in keywords)
-            lines.append(f'  keywords: ({kw_str}),')
+            lines.append(f'  keywords: ({kw_str},),')
 
         lines.append(')')
 
