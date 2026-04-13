@@ -636,6 +636,331 @@ class PptxBuilder:
                             font_size=14, color=self.theme['text_light'],
                             alignment=PP_ALIGN.CENTER)
 
+    # ═══════════════════════════════════════════
+    # 投行 Pitch Book 专用 Slide 类型
+    # ═══════════════════════════════════════════
+
+    def add_comparable_companies_slide(self, title: str, headers: List[str],
+                                        rows: List[List[str]],
+                                        summary_rows: List[Dict] = None,
+                                        source: str = ''):
+        """可比公司分析 — 投行核心 slide，宽表格 10-15 列，带 Median/Mean 汇总行"""
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        self._add_bg(slide)
+
+        # 顶部色条
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0), Inches(0), self.slide_w, Inches(0.06),
+                        self.theme['primary'])
+
+        # 标题
+        self._add_text(slide, title,
+                        Inches(0.5), Inches(0.25), Inches(12), Inches(0.5),
+                        font_size=22, bold=True, color=self.theme['primary'])
+
+        # 标题下划线
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0.5), Inches(0.8), Inches(12.2), Inches(0.015),
+                        self.theme['primary'])
+
+        # 表格 — 紧凑布局，字号 8-9pt
+        n_summary = len(summary_rows) if summary_rows else 0
+        n_rows = min(len(rows) + 1 + n_summary, 22)  # 表头 + 数据 + 汇总
+        n_cols = len(headers)
+
+        table_shape = slide.shapes.add_table(
+            n_rows, n_cols,
+            Inches(0.3), Inches(1.0),
+            Inches(12.6), Inches(5.5)
+        )
+        table = table_shape.table
+
+        # 表头
+        for j, h in enumerate(headers):
+            cell = table.cell(0, j)
+            cell.text = str(h)
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = self.theme['table_header']
+            for p in cell.text_frame.paragraphs:
+                p.font.size = Pt(8)
+                p.font.bold = True
+                p.font.color.rgb = self.theme['text_light']
+                p.font.name = self.theme['font_body_fallback']
+                p.alignment = PP_ALIGN.CENTER
+
+        # 数据行
+        max_data = n_rows - 1 - n_summary
+        for i, row in enumerate(rows[:max_data]):
+            for j, val in enumerate(row):
+                cell = table.cell(i + 1, j)
+                cell.text = str(val)
+                if i % 2 == 1:
+                    cell.fill.solid()
+                    cell.fill.fore_color.rgb = self.theme['table_alt']
+                for p in cell.text_frame.paragraphs:
+                    p.font.size = Pt(8)
+                    p.font.color.rgb = self.theme['text_dark']
+                    p.font.name = self.theme['font_body_fallback']
+                    # 第一列左对齐（公司名），其余居中
+                    p.alignment = PP_ALIGN.LEFT if j == 0 else PP_ALIGN.CENTER
+
+        # 汇总行（Median/Mean）— 加粗 + 顶部线
+        if summary_rows:
+            data_end = len(rows[:max_data]) + 1
+            for si, sr in enumerate(summary_rows):
+                row_idx = data_end + si
+                if row_idx >= n_rows:
+                    break
+                values = [sr.get('label', '')] + sr.get('values', [])
+                for j, val in enumerate(values[:n_cols]):
+                    cell = table.cell(row_idx, j)
+                    cell.text = str(val)
+                    cell.fill.solid()
+                    cell.fill.fore_color.rgb = self.theme['table_alt']
+                    for p in cell.text_frame.paragraphs:
+                        p.font.size = Pt(8)
+                        p.font.bold = True
+                        p.font.color.rgb = self.theme['primary']
+                        p.font.name = self.theme['font_body_fallback']
+                        p.alignment = PP_ALIGN.LEFT if j == 0 else PP_ALIGN.CENTER
+
+        # Source 脚注
+        if source:
+            self._add_text(slide, f"Source: {source}",
+                            Inches(0.5), Inches(6.7), Inches(12), Inches(0.3),
+                            font_size=7, color=RGBColor(0x80, 0x80, 0x80),
+                            font_name=self.theme['font_body_fallback'])
+
+    def add_football_field_slide(self, title: str, ranges: List[Dict],
+                                   current_price: float = None,
+                                   currency: str = '$', source: str = ''):
+        """估值区间图（Football Field）— 横向条形图，多种估值方法对比
+
+        ranges = [
+            {"method": "52-Week Range", "low": 28.5, "high": 45.2},
+            {"method": "DCF Analysis", "low": 35.0, "high": 50.0},
+        ]
+        """
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        self._add_bg(slide)
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0), Inches(0), self.slide_w, Inches(0.06),
+                        self.theme['primary'])
+
+        self._add_text(slide, title,
+                        Inches(0.8), Inches(0.25), Inches(11), Inches(0.5),
+                        font_size=22, bold=True, color=self.theme['primary'])
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0.8), Inches(0.8), Inches(11.5), Inches(0.015),
+                        self.theme['primary'])
+
+        if not ranges:
+            return
+
+        # 计算全局范围
+        all_vals = [r['low'] for r in ranges] + [r['high'] for r in ranges]
+        if current_price is not None:
+            all_vals.append(current_price)
+        global_min = min(all_vals) * 0.85
+        global_max = max(all_vals) * 1.1
+        scale = 9.5 / (global_max - global_min)  # 图表区域 9.5 inches
+
+        n = len(ranges)
+        bar_h = min(0.5, 4.0 / n)  # 每条高度
+        gap = 0.15
+        start_y = 1.5
+        chart_left = 3.0  # 留空给方法名标签
+
+        # 颜色梯度
+        bar_colors = [
+            self.theme['primary'],
+            self.theme['secondary'],
+            RGBColor(0x54, 0x82, 0x35),  # 绿
+            RGBColor(0x80, 0x80, 0x80),  # 灰
+            RGBColor(0xE5, 0x3E, 0x3E),  # 红
+            RGBColor(0x7C, 0x3A, 0xED),  # 紫
+        ]
+
+        for i, r in enumerate(ranges):
+            y = start_y + i * (bar_h + gap)
+            low, high = r['low'], r['high']
+
+            # 方法名标签
+            self._add_text(slide, r['method'],
+                            Inches(0.5), Inches(y), Inches(2.3), Inches(bar_h),
+                            font_size=10, color=self.theme['text_dark'],
+                            font_name=self.theme['font_body_fallback'],
+                            alignment=PP_ALIGN.RIGHT)
+
+            # 条形
+            bar_left = chart_left + (low - global_min) * scale
+            bar_width = (high - low) * scale
+            color = bar_colors[i % len(bar_colors)]
+
+            bar = slide.shapes.add_shape(
+                MSO_SHAPE.ROUNDED_RECTANGLE,
+                Inches(bar_left), Inches(y + 0.05),
+                Inches(max(bar_width, 0.1)), Inches(bar_h - 0.1))
+            bar.fill.solid()
+            bar.fill.fore_color.rgb = color
+            bar.line.fill.background()
+
+            # 数值标注（低-高）
+            self._add_text(slide, f"{currency}{low:.1f}",
+                            Inches(bar_left - 0.6), Inches(y), Inches(0.55), Inches(bar_h),
+                            font_size=8, color=self.theme['text_dark'],
+                            alignment=PP_ALIGN.RIGHT,
+                            font_name=self.theme['font_body_fallback'])
+            self._add_text(slide, f"{currency}{high:.1f}",
+                            Inches(bar_left + bar_width + 0.05), Inches(y),
+                            Inches(0.55), Inches(bar_h),
+                            font_size=8, color=self.theme['text_dark'],
+                            alignment=PP_ALIGN.LEFT,
+                            font_name=self.theme['font_body_fallback'])
+
+        # 当前价格竖线
+        if current_price is not None:
+            line_x = chart_left + (current_price - global_min) * scale
+            total_h = n * (bar_h + gap)
+            line = slide.shapes.add_shape(
+                MSO_SHAPE.RECTANGLE,
+                Inches(line_x), Inches(start_y - 0.1),
+                Inches(0.02), Inches(total_h + 0.3))
+            line.fill.solid()
+            line.fill.fore_color.rgb = RGBColor(0xE5, 0x3E, 0x3E)
+            line.line.fill.background()
+
+            self._add_text(slide, f"Current: {currency}{current_price:.1f}",
+                            Inches(line_x - 0.5), Inches(start_y + total_h + 0.2),
+                            Inches(1.2), Inches(0.3),
+                            font_size=9, bold=True, color=RGBColor(0xE5, 0x3E, 0x3E),
+                            alignment=PP_ALIGN.CENTER,
+                            font_name=self.theme['font_body_fallback'])
+
+        # Source
+        if source:
+            self._add_text(slide, f"Source: {source}",
+                            Inches(0.5), Inches(6.7), Inches(12), Inches(0.3),
+                            font_size=7, color=RGBColor(0x80, 0x80, 0x80),
+                            font_name=self.theme['font_body_fallback'])
+
+    def add_sources_uses_slide(self, title: str, sources: List[Dict],
+                                 uses: List[Dict], currency: str = '$m',
+                                 source_note: str = ''):
+        """资金来源与用途（Sources & Uses）— 双栏对称表格
+
+        sources = [{"item": "Term Loan A", "amount": 500}, ...]
+        uses = [{"item": "Purchase Equity", "amount": 850}, ...]
+        """
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        self._add_bg(slide)
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0), Inches(0), self.slide_w, Inches(0.06),
+                        self.theme['primary'])
+
+        self._add_text(slide, title,
+                        Inches(0.8), Inches(0.25), Inches(11), Inches(0.5),
+                        font_size=22, bold=True, color=self.theme['primary'])
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0.8), Inches(0.8), Inches(11.5), Inches(0.015),
+                        self.theme['primary'])
+
+        # Sources 表格（左）
+        s_total = sum(s['amount'] for s in sources)
+        s_rows = len(sources) + 2  # header + data + total
+        s_table = slide.shapes.add_table(
+            s_rows, 2, Inches(0.8), Inches(1.2), Inches(5.5), Inches(4.5)
+        ).table
+
+        # Sources 表头
+        for j, h in enumerate([f'Sources', f'Amount ({currency})']):
+            cell = s_table.cell(0, j)
+            cell.text = h
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = self.theme['primary']
+            for p in cell.text_frame.paragraphs:
+                p.font.size = Pt(11)
+                p.font.bold = True
+                p.font.color.rgb = self.theme['text_light']
+                p.font.name = self.theme['font_body_fallback']
+
+        # Sources 数据
+        for i, s in enumerate(sources):
+            s_table.cell(i+1, 0).text = s['item']
+            s_table.cell(i+1, 1).text = f"{s['amount']:,.0f}"
+            for j in range(2):
+                for p in s_table.cell(i+1, j).text_frame.paragraphs:
+                    p.font.size = Pt(10)
+                    p.font.color.rgb = self.theme['text_dark']
+                    p.font.name = self.theme['font_body_fallback']
+                    p.alignment = PP_ALIGN.LEFT if j == 0 else PP_ALIGN.RIGHT
+
+        # Sources Total
+        s_table.cell(s_rows-1, 0).text = 'Total Sources'
+        s_table.cell(s_rows-1, 1).text = f"{s_total:,.0f}"
+        for j in range(2):
+            cell = s_table.cell(s_rows-1, j)
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = self.theme['table_alt']
+            for p in cell.text_frame.paragraphs:
+                p.font.size = Pt(10)
+                p.font.bold = True
+                p.font.color.rgb = self.theme['primary']
+                p.font.name = self.theme['font_body_fallback']
+                p.alignment = PP_ALIGN.LEFT if j == 0 else PP_ALIGN.RIGHT
+
+        # Uses 表格（右）
+        u_total = sum(u['amount'] for u in uses)
+        u_rows = len(uses) + 2
+        u_table = slide.shapes.add_table(
+            u_rows, 2, Inches(7), Inches(1.2), Inches(5.5), Inches(4.5)
+        ).table
+
+        for j, h in enumerate([f'Uses', f'Amount ({currency})']):
+            cell = u_table.cell(0, j)
+            cell.text = h
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = self.theme['primary']
+            for p in cell.text_frame.paragraphs:
+                p.font.size = Pt(11)
+                p.font.bold = True
+                p.font.color.rgb = self.theme['text_light']
+                p.font.name = self.theme['font_body_fallback']
+
+        for i, u in enumerate(uses):
+            u_table.cell(i+1, 0).text = u['item']
+            u_table.cell(i+1, 1).text = f"{u['amount']:,.0f}"
+            for j in range(2):
+                for p in u_table.cell(i+1, j).text_frame.paragraphs:
+                    p.font.size = Pt(10)
+                    p.font.color.rgb = self.theme['text_dark']
+                    p.font.name = self.theme['font_body_fallback']
+                    p.alignment = PP_ALIGN.LEFT if j == 0 else PP_ALIGN.RIGHT
+
+        u_table.cell(u_rows-1, 0).text = 'Total Uses'
+        u_table.cell(u_rows-1, 1).text = f"{u_total:,.0f}"
+        for j in range(2):
+            cell = u_table.cell(u_rows-1, j)
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = self.theme['table_alt']
+            for p in cell.text_frame.paragraphs:
+                p.font.size = Pt(10)
+                p.font.bold = True
+                p.font.color.rgb = self.theme['primary']
+                p.font.name = self.theme['font_body_fallback']
+                p.alignment = PP_ALIGN.LEFT if j == 0 else PP_ALIGN.RIGHT
+
+        # Source note
+        if source_note:
+            self._add_text(slide, f"Source: {source_note}",
+                            Inches(0.5), Inches(6.7), Inches(12), Inches(0.3),
+                            font_size=7, color=RGBColor(0x80, 0x80, 0x80),
+                            font_name=self.theme['font_body_fallback'])
+
     def save(self, output_path: str):
         """保存 PPTX"""
         os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
@@ -762,6 +1087,32 @@ def render_pptx(data: Dict, output_path: str, template: str = 'default'):
                 title=slide_data.get('title', 'Thank You'),
                 subtitle=slide_data.get('subtitle', ''),
                 contact=slide_data.get('contact', ''),
+            )
+
+        # 投行 Pitch Book 专用
+        elif layout == 'comparable_companies':
+            builder.add_comparable_companies_slide(
+                title=slide_data.get('title', 'Comparable Companies Analysis'),
+                headers=slide_data.get('headers', []),
+                rows=slide_data.get('rows', []),
+                summary_rows=slide_data.get('summary_rows'),
+                source=slide_data.get('source', ''),
+            )
+        elif layout == 'football_field':
+            builder.add_football_field_slide(
+                title=slide_data.get('title', 'Valuation Summary'),
+                ranges=slide_data.get('ranges', []),
+                current_price=slide_data.get('current_price'),
+                currency=slide_data.get('currency', '$'),
+                source=slide_data.get('source', ''),
+            )
+        elif layout == 'sources_uses':
+            builder.add_sources_uses_slide(
+                title=slide_data.get('title', 'Sources & Uses'),
+                sources=slide_data.get('sources', []),
+                uses=slide_data.get('uses', []),
+                currency=slide_data.get('currency', '$m'),
+                source_note=slide_data.get('source', ''),
             )
 
     builder.save(output_path)
