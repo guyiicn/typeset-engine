@@ -1,441 +1,343 @@
 # typeset-engine
 
-统一文档渲染引擎。输入 JSON，输出 PDF / DOCX / PPTX / 图表 / AI幻灯片 / AI配图 / 视频。
+统一文档渲染引擎 v3。输入 JSON，输出 PDF / DOCX / PPTX / 图表 / 技术图 / AI幻灯片 / AI配图。
 
-Docker 容器化，提供 HTTP API（端口 9090）和 CLI 两种调用方式。
+Docker 容器化，HTTP API（端口 9090），15 种 PDF 主题 + 20 种 PPTX slide layout。
 
 ---
 
-## 启动服务
+## 快速开始
 
 ```bash
-# HTTP API 模式（推荐）
+# 启动
 docker run -d --name typeset-engine \
-  -p 9090:9090 \
+  -p 9091:9090 \
   -e GEMINI_API_KEY=你的key \
-  -v /data/output:/app/output \
-  typeset-engine:v1
+  -v /tmp/typeset-output:/app/output \
+  typeset-engine:v3
 
 # 验证
-curl http://localhost:9090/health
-# {"status": "ok", "engine": "typeset-engine", "version": "1.0"}
+curl http://localhost:9091/health
+
+# 生成 PDF（中金风格）
+curl -X POST http://localhost:9091/render/pdf?theme=cicc \
+  -H "Content-Type: application/json" \
+  -d @report.json -o report.pdf
+
+# 生成 PPTX（Goldman Sachs 风格）
+curl -X POST http://localhost:9091/render/pptx \
+  -H "Content-Type: application/json" \
+  -d '{"theme":"goldman","title":"Report","slides":[...]}' -o deck.pptx
+
+# 生成技术架构图（SVG → PNG）
+curl -X POST http://localhost:9091/render/diagram \
+  -H "Content-Type: application/json" \
+  -d '{"svg":"<svg>...</svg>","width":1920}' -o diagram.png
 ```
 
-> GEMINI_API_KEY 仅 pptx-ai / illustrate 命令需要，其他命令可不传。
+> GEMINI_API_KEY 仅 pptx-ai / illustrate 需要，其他命令可不传。
 
 ---
 
-## 能力总览
+## HTTP API 端点
 
-| 命令 | HTTP 端点 | 输入 | 输出 | 需要 API Key |
-|------|----------|------|------|:---:|
-| **pdf** | `POST /render/pdf` | 报告 JSON | PDF 文件 | 否 |
-| **docx** | `POST /render/docx` | 报告 JSON | DOCX 文件 | 否 |
-| **pptx** | `POST /render/pptx` | 幻灯片 JSON | PPTX 文件 | 否 |
-| **chart** | `POST /render/chart` | 图表 JSON | PNG 图片 | 否 |
-| **pptx-ai** | `POST /render/pptx-ai` | slides_plan JSON | ZIP（图片+HTML+MP4） | 是 |
-| **diagram** | `POST /render/diagram` | SVG 字符串 | PNG 图片 | 否 |
-| **illustrate** | `POST /render/illustrate` | 文本+风格 | PNG 图片 | 是 |
-| **styles** | `GET /styles` | — | 风格列表 JSON | 否 |
-| **capabilities** | `GET /capabilities` | — | 全部命令描述 JSON | 否 |
-| **health** | `GET /health` | — | 状态 JSON | 否 |
-
----
-
-## HTTP API 调用（curl）
-
-### 生成 PDF
-
-```bash
-curl -X POST http://localhost:9090/render/pdf \
-  -H "Content-Type: application/json" \
-  -d @report.json \
-  -o report.pdf
-```
-
-### 生成 DOCX
-
-```bash
-curl -X POST http://localhost:9090/render/docx \
-  -H "Content-Type: application/json" \
-  -d @report.json \
-  -o report.docx
-```
-
-### 生成图表
-
-```bash
-curl -X POST http://localhost:9090/render/chart \
-  -H "Content-Type: application/json" \
-  -d '{"type":"bar","theme":"cicc","data":{"title":"营收","categories":["Q1","Q2","Q3"],"series":[{"name":"收入","values":[100,120,150]}]}}' \
-  -o chart.png
-```
-
-### 渲染技术架构图（SVG → PNG）
-
-```bash
-# 基本用法：SVG 字符串 → 1920px PNG
-curl -X POST http://localhost:9090/render/diagram \
-  -H "Content-Type: application/json" \
-  -d '{"svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 960 600\"><rect width=\"960\" height=\"600\" fill=\"#fff\"/><text x=\"480\" y=\"300\" text-anchor=\"middle\" font-size=\"24\">Hello Diagram</text></svg>", "width": 1920}' \
-  -o diagram.png
-
-# 仅校验 SVG 语法
-curl -X POST http://localhost:9090/render/diagram \
-  -H "Content-Type: application/json" \
-  -d '{"svg": "<svg>...</svg>", "validate": true}'
-
-# 同时输出 SVG + PNG
-curl -X POST http://localhost:9090/render/diagram \
-  -H "Content-Type: application/json" \
-  -d '{"svg": "...", "format": "both"}' \
-  -o diagram.png
-```
-
-参数：`svg`（必填）、`width`（默认 1920）、`format`（png/svg/both）、`validate`（true=仅校验）
-
-### 生成 AI 配图
-
-```bash
-curl -X POST http://localhost:9090/render/illustrate \
-  -H "Content-Type: application/json" \
-  -d '{"content":"多智能体协作架构","style":"ticket","title":"Multi-Agent"}' \
-  -o illustration.png
-```
-
-### 生成 AI PPT
-
-```bash
-curl -X POST http://localhost:9090/render/pptx-ai \
-  -H "Content-Type: application/json" \
-  -d '{"title":"AI趋势","style":"gradient-glass","slides":[{"type":"cover","content":"AI 2026"},{"type":"content","content":"要点内容"}]}' \
-  -o ppt.zip
-```
+| 端点 | 方法 | 输入 | 输出 | API Key |
+|------|:----:|------|------|:-------:|
+| `/render/pdf` | POST | 报告 JSON + `?theme=xxx` | PDF | 否 |
+| `/render/docx` | POST | 报告 JSON + `?theme=xxx` | DOCX | 否 |
+| `/render/pptx` | POST | 幻灯片 JSON | PPTX | 否 |
+| `/render/chart` | POST | 图表 JSON | PNG | 否 |
+| `/render/diagram` | POST | SVG 字符串 | PNG | 否 |
+| `/render/pptx-ai` | POST | slides_plan JSON | ZIP | 是 |
+| `/render/illustrate` | POST | 文本+风格 | PNG | 是 |
+| `/styles` | GET | — | 风格列表 | 否 |
+| `/capabilities` | GET | — | 全部能力描述 | 否 |
+| `/health` | GET | — | 状态 | 否 |
+| `/fonts` | GET | — | 字体列表 | 否 |
 
 ---
 
-## CLI 调用（docker exec）
+## PDF 主题（15 种）
 
-如果容器已启动，也可以用 docker exec 直接调用 CLI：
+### 金融投研（7 种）
 
-```bash
-# PDF
-docker exec typeset-engine python scripts/engine.py pdf \
-  --data /app/output/report.json --output /app/output/report.pdf --theme cicc
+| 主题 | 说明 | 配色 |
+|------|------|------|
+| `cicc` | 中金公司 CICC | 深蓝 #1a1a2e + 红 #c41e3a |
+| `ms` | 摩根斯坦利 Morgan Stanley | 深蓝 #002D72 |
+| `cms` | 招商证券 CMS | 红 #C1002A |
+| `dachen` | 达晨财智 Fortune Capital | 暗红 #b8141d |
+| `goldman` | Goldman Sachs | 深蓝 #003A70 + 浅蓝 #6CACE4 |
+| `ubs` | UBS | 红 #E60000 |
+| `whitepaper` | 技术白皮书（通用） | 灰蓝 #2C3E50 + 蓝 #3498DB |
 
-# DOCX
-docker exec typeset-engine python scripts/engine.py docx \
-  --data /app/output/report.json --output /app/output/report.docx --theme cicc
+### 咨询 MBB（3 种）
 
-# 图表
-docker exec typeset-engine python scripts/engine.py chart \
-  --type bar --data /app/output/chart.json --output /app/output/chart.png --theme cicc
+| 主题 | 说明 | 配色 |
+|------|------|------|
+| `mckinsey` | 麦肯锡 McKinsey | 深蓝 #00205B + 浅蓝 #009FDA |
+| `bcg` | 波士顿咨询 BCG | 深绿 #00645A + 浅绿 #6CC24A |
+| `bain` | 贝恩咨询 Bain | 红 #CC0000 + 金 #D4A843 |
 
-# AI 配图
-docker exec typeset-engine python scripts/engine.py illustrate \
-  --content "量子计算原理" --style gradient-glass --output /app/output/img.png
+### 公文（2 种）
 
-# AI PPT
-docker exec typeset-engine python scripts/engine.py pptx-ai \
-  --data /app/output/plan.json --style gradient-glass --output /app/output/ai_ppt/
+| 主题 | 说明 | 字体 |
+|------|------|------|
+| `gongwen` | GB/T 9704 党政公文 | 方正小标宋 + 仿宋 + 黑体 |
+| `tbs` | 电广传媒企业公文 | 预设 organ=湖南电广传媒股份有限公司 |
 
-# 列出风格
-docker exec typeset-engine python scripts/engine.py styles
-```
+### 学术论文（3 种）
+
+| 主题 | 说明 | 格式 |
+|------|------|------|
+| `ieee` | IEEE 双栏学术论文 | Liberation Serif, 10pt |
+| `cn-paper` | 中文学术论文 | 宋体/黑体/楷体, 五号 |
+| `working-paper` | SSRN 工作论文 | 英文通用学术 |
 
 ---
 
-## JSON 数据格式
+## PPTX Slide Layout（20 种）
 
-PDF、DOCX、PPTX 共用同一套 JSON 格式。同一份数据可以同时出三种文档。
+### 通用（12 种）
 
-### 完整示例
+| Layout | 说明 |
+|--------|------|
+| `title` | 封面 |
+| `section` | 章节分隔页 |
+| `content` | 正文（文字 + 可选图片 + bullet points） |
+| `two_column` | 双栏（左文右图或左右文字） |
+| `table` | 表格页 |
+| `summary` | 总结页（深色底 + 要点） |
+| `kpi` | KPI 指标卡片（3-6 个大数字） |
+| `chart` | 全幅图表页 |
+| `comparison` | 对比页（左右两栏） |
+| `timeline` | 时间线（水平里程碑） |
+| `quote` | 引用页 |
+| `end` | 结束页 |
+
+### 投行 Pitch Book（8 种）
+
+| Layout | 说明 | 信息密度 |
+|--------|------|:--------:|
+| `comparable_companies` | 可比公司分析（宽表格 10-15 列 + Median/Mean 汇总） | 极高 |
+| `football_field` | 估值区间图（横向条形 + 当前价格线） | 中 |
+| `sources_uses` | 资金来源与用途（双栏对称表格） | 高 |
+| `sensitivity_matrix` | 敏感性分析（WACC×TGR 二维矩阵 + base case 高亮） | 高 |
+| `transaction_overview` | 交易概览（左侧要点 + 右侧条款表格） | 高 |
+| `disclaimer` | 免责声明（小字体法律文本） | 低 |
+| `waterfall` | 瀑布图/桥接分析（收入分解） | 中 |
+| `org_chart` | 组织架构图（3 层树状） | 中 |
+
+### PPTX 主题（6 种）
+
+`default` / `cicc` / `goldman` / `morgan` / `dark` / `minimal`
+
+---
+
+## 技术架构图（7 种视觉风格）
+
+通过 `/render/diagram` 端点，接收 SVG 字符串，用 `rsvg-convert` 导出 1920px PNG。
+
+| # | 风格 | 背景 | 适用场景 |
+|---|------|------|---------|
+| 1 | Flat Icon 扁平 | 白底 | 文档、博客 |
+| 2 | Dark Terminal 暗黑 | #0f0f1a | GitHub README |
+| 3 | Blueprint 蓝图 | #0a1628 | 架构设计 |
+| 4 | Notion Clean 极简 | 白底 | Wiki、Notion |
+| 5 | Glassmorphism 玻璃态 | 深色渐变 | Keynote、官网 |
+| 6 | Claude Official | #f8f6f3 | Anthropic 风格 |
+| 7 | OpenAI Official | 白底 | OpenAI 风格 |
+
+参考文件：`references/diagram/style-*.md`
+SVG 模板：`references/diagram-templates/*.svg`（10 种图类型）
+示例数据：`references/diagram-fixtures/*.json`（7 种风格示例）
+
+---
+
+## 公文 JSON 格式
 
 ```json
 {
-  "title": "贵州茅台深度研究报告",
-  "title_en": "Kweichow Moutai Research",
-  "author": "DeerFlow Research",
-  "date": "2026-04-07",
-  "version": "v1.0",
-  "theme": "cicc",
-  "toc": true,
-
-  "charts": [
-    {
-      "id": "revenue_bar",
-      "type": "bar",
-      "data": {
-        "title": "营收对比（亿元）",
-        "categories": ["2022", "2023", "2024"],
-        "series": [
-          {"name": "营收", "values": [1276, 1505, 1738]},
-          {"name": "净利润", "values": [627, 747, 862]}
-        ]
-      }
-    }
-  ],
-
-  "illustrations": [
-    {
-      "id": "ai_cover",
-      "content": "白酒行业竞争格局与茅台龙头地位",
-      "style": "gradient-glass",
-      "title": "Industry Landscape"
-    }
-  ],
-
+  "title": "关于XX的通知",
+  "recipient": "各部门",
+  "organ": "XX机关",
+  "doc_type": "文件",
+  "number": "XX发〔2026〕1号",
+  "redhead_size": 30,
   "sections": [
-    {
-      "type": "heading",
-      "title": "核心观点",
-      "children": [
-        {"type": "quote", "content": "维持买入评级，目标价2200元。"},
-        {"type": "kpi", "metrics": [
-          {"label": "目标价", "value": "¥2,200", "change": "+15%"},
-          {"label": "PE", "value": "28.5x"},
-          {"label": "评级", "value": "买入", "change": "维持"}
-        ]}
-      ]
-    },
-    {
-      "type": "heading",
-      "title": "财务分析",
-      "content": "茅台近三年营收保持双位数增长。",
-      "children": [
-        {"type": "chart", "chart_id": "revenue_bar", "caption": "图1：营收趋势"},
-        {"type": "table",
-         "headers": ["指标", "2022", "2023", "2024"],
-         "rows": [
-           ["营收(亿)", "1,276", "1,505", "1,738"],
-           ["ROE", "31.2%", "33.5%", "34.1%"]
-         ]},
-        {"type": "ai-image", "image_id": "ai_cover", "caption": "图2：行业格局"}
-      ]
-    },
-    {"type": "pagebreak"},
-    {
-      "type": "heading",
-      "title": "风险提示",
-      "content": "宏观经济下行风险；政策监管风险。"
-    }
+    {"type": "paragraph", "content": "正文内容"},
+    {"type": "heading", "title": "一、标题", "children": [
+      {"type": "paragraph", "content": "子内容"}
+    ]}
   ],
-
-  "disclaimer": "本报告仅供参考，不构成投资建议。"
+  "attachments": ["附件名称"],
+  "signature_organ": "XX机关",
+  "signature_date": "2026年4月13日",
+  "cc": "抄送单位",
+  "printer": "印发单位",
+  "print_date": "2026年4月13日印发"
 }
 ```
 
-### 顶层字段
+`tbs` 主题自动预设 `organ=湖南电广传媒股份有限公司`，只需传 `title` + `sections` + `signature_date`。
 
-| 字段 | 类型 | 必需 | 说明 |
-|------|------|:---:|------|
-| `title` | string | 是 | 报告标题 |
-| `title_en` | string | 否 | 英文副标题 |
-| `author` | string | 否 | 作者/机构 |
-| `date` | string | 否 | 日期 |
-| `version` | string | 否 | 版本号 |
-| `theme` | string | 否 | 主题：`cicc` / `ms` / `cms` / `dachen`，默认 `cicc` |
-| `toc` | bool | 否 | 是否生成目录，默认 `true` |
-| `charts` | array | 否 | 图表定义（见下方） |
-| `illustrations` | array | 否 | AI 配图定义（需 GEMINI_API_KEY） |
-| `sections` | array | 是 | 文档内容章节 |
-| `disclaimer` | string | 否 | 免责声明 |
+---
 
-### section type 速查
-
-| type | 用途 | 必需字段 | 示例 |
-|------|------|---------|------|
-| `heading` | 标题（H1→H2→H3 嵌套） | `title` | `{"type":"heading","title":"章节","content":"首段","children":[...]}` |
-| `paragraph` | 正文段落 | `content` | `{"type":"paragraph","content":"段落文本"}` |
-| `quote` | 引用框（彩色左边框） | `content` | `{"type":"quote","content":"核心观点"}` |
-| `table` | 数据表格 | `headers`, `rows` | `{"type":"table","headers":["A","B"],"rows":[["1","2"]]}` |
-| `chart` | 嵌入图表 | `chart_id` | `{"type":"chart","chart_id":"revenue_bar","caption":"图1"}` |
-| `kpi` | KPI 指标卡片 | `metrics` | `{"type":"kpi","metrics":[{"label":"ROE","value":"35%","change":"+2%"}]}` |
-| `ai-image` | AI 配图 | `image_id` | `{"type":"ai-image","image_id":"ai_cover","caption":"配图"}` |
-| `pagebreak` | 分页符 | — | `{"type":"pagebreak"}` |
-
-### charts 数组
+## 投行 PPTX JSON 示例
 
 ```json
 {
-  "id": "唯一ID，sections 中用 chart_id 引用",
-  "type": "bar",
-  "data": {
-    "title": "图表标题",
-    "categories": ["X1", "X2"],
-    "series": [{"name": "系列名", "values": [1, 2]}]
-  }
-}
-```
-
-**图表类型**: `bar` / `line` / `area` / `pie` / `waterfall` / `scatter` / `heatmap` / `radar` / `funnel` / `gauge` / `treemap` / `candlestick` / `combo`
-
-### illustrations 数组
-
-```json
-{
-  "id": "唯一ID，sections 中用 image_id 引用",
-  "content": "要配图的文本描述",
-  "style": "gradient-glass",
-  "title": "可选标题"
-}
-```
-
-**风格**: `gradient-glass`(科技玻璃) / `vector-illustration`(矢量插画) / `ticket`(极简票券)
-
-### AI PPT 数据格式（pptx-ai 专用）
-
-```json
-{
-  "title": "演示标题",
-  "style": "gradient-glass",
+  "title": "Project Alpha",
+  "subtitle": "Strictly Confidential",
+  "theme": "goldman",
   "slides": [
-    {"type": "cover", "content": "封面标题"},
-    {"type": "content", "content": "要点内容..."},
-    {"type": "data", "content": "数据和结论..."}
+    {
+      "layout": "comparable_companies",
+      "title": "Comparable Companies Analysis",
+      "headers": ["Company", "Mkt Cap", "EV/EBITDA", "P/E"],
+      "rows": [["Co A", "$85bn", "11.2x", "18.5x"]],
+      "summary_rows": [{"label": "Median", "values": ["$55bn", "10.3x", "16.2x"]}],
+      "source": "Bloomberg"
+    },
+    {
+      "layout": "football_field",
+      "title": "Valuation Summary",
+      "ranges": [
+        {"method": "DCF", "low": 35.0, "high": 50.0},
+        {"method": "Comps", "low": 32.0, "high": 42.0}
+      ],
+      "current_price": 38.5,
+      "currency": "$"
+    },
+    {
+      "layout": "sources_uses",
+      "title": "Sources & Uses",
+      "sources": [{"item": "Term Loan", "amount": 500}],
+      "uses": [{"item": "Equity Purchase", "amount": 500}],
+      "currency": "$m"
+    }
   ]
 }
 ```
 
-**页面类型**: `cover`(封面) / `content`(内容) / `data`(数据/总结)
-
 ---
 
-## 主题一览
+## 学术论文 JSON 示例
 
-### PDF / DOCX 主题
-
-| 主题 | 视觉 | 适用场景 |
-|------|------|---------|
-| `cicc` | 深蓝底+红色装饰线，宋体正文 | 中金风格投研报告 |
-| `ms` | 深蓝+亮蓝，无衬线字体 | 摩根斯坦利 Blue Paper |
-| `cms` | 招商红+传统券商风 | 招商证券研报 |
-| `dachen` | 达晨红+稳重国资风 | 创投/国资报告 |
-
-### 图表主题
-
-| 主题 | 配色 |
-|------|------|
-| `default` | 深蓝+金色 |
-| `cicc` | 中金红+深灰 |
-| `goldman` | 蓝绿+金色 |
-| `dark` | 暗色底+霓虹色 |
-
-### AI 风格（pptx-ai / illustrate）
-
-| 风格 | 视觉 | 适用场景 |
-|------|------|---------|
-| `gradient-glass` | 3D 玻璃+霓虹渐变+深色背景 | 科技产品、商业演示 |
-| `vector-illustration` | 扁平矢量+复古配色+几何简化 | 教育、创意方案 |
-| `ticket` | 黑白对比+网格排版+票券美学 | 信息图、数据可视化 |
-
----
-
-## 创建调用 typeset-engine 的 Claude Code Skill
-
-以下是一个 SKILL.md 模板，其他 agent 可以用它注册成技能来调用 typeset-engine：
-
-```markdown
----
-name: my-report-generator
-description: 使用 typeset-engine 生成投研报告 PDF/DOCX
----
-
-# 报告生成技能
-
-## 依赖
-
-- typeset-engine Docker 容器已启动：`docker run -d --name typeset-engine -p 9090:9090 typeset-engine:v1`
-
-## 工作流程
-
-1. 分析用户需求，确定报告结构
-2. 构造 JSON 数据（参考 typeset-engine JSON Schema）
-3. 调用 HTTP API 生成文档
-4. 返回文件给用户
-
-## 生成 PDF
-
-\```bash
-# 1. 将 JSON 写入临时文件
-cat > /tmp/report.json << 'ENDJSON'
-{你构造的JSON}
-ENDJSON
-
-# 2. 调用 API
-curl -s -X POST http://localhost:9090/render/pdf \
-  -H "Content-Type: application/json" \
-  -d @/tmp/report.json \
-  -o /tmp/report.pdf
-
-# 3. 检查结果
-ls -la /tmp/report.pdf
-\```
-
-## 生成图表
-
-\```bash
-curl -s -X POST http://localhost:9090/render/chart \
-  -H "Content-Type: application/json" \
-  -d '{"type":"bar","theme":"cicc","data":{"title":"标题","categories":[...],"series":[...]}}' \
-  -o /tmp/chart.png
-\```
-
-## 查看可用能力
-
-\```bash
-curl -s http://localhost:9090/capabilities | python3 -m json.tool
-\```
+```json
+{
+  "title": "Paper Title",
+  "authors": [{"name": "Author", "organization": "University"}],
+  "abstract": "Abstract text...",
+  "keywords": ["AI", "NLP"],
+  "sections": [
+    {"type": "heading", "title": "Introduction", "children": [
+      {"type": "paragraph", "content": "Content..."}
+    ]}
+  ]
+}
 ```
 
+使用 `?theme=ieee` / `?theme=cn-paper` / `?theme=working-paper`。
+
+学位论文模板（SJTU/PKU/HUST）需直接编写 Typst 源码 import，不走 JSON API。
+
 ---
 
-## 技术栈
+## 字体
 
-| 组件 | 用途 |
+Docker 镜像内置以下字体：
+
+| 字体 | 用途 |
 |------|------|
-| Typst 0.14 | PDF 排版 |
-| Plotly + Kaleido + Chrome | 图表渲染 |
-| python-pptx | PPTX 生成 |
-| python-docx | DOCX 生成 |
-| Gemini API | AI 图片生成 |
-| FFmpeg | 视频合成 |
-| Noto CJK 字体 | 中文支持 |
-| http.server | HTTP API |
+| 方正小标宋 (FZXiaoBiaoSong-B05) | 公文红头/标题 |
+| SimHei 黑体 | 公文一级标题 |
+| FangSong 仿宋 | 公文正文 |
+| 方正仿宋 (FZFangSong-Z02) | 公文正文备选 |
+| Noto Sans/Serif CJK SC | 通用中文 |
+| AR PL UKai CN | 楷体 |
+| cwTeX 系列 | 仿宋/黑体/楷体/明体 |
+| Liberation Serif/Sans/Mono | Times/Arial/Courier 替代 |
 
-## 文件结构
+---
+
+## 图表（13 种）
+
+`bar` / `line` / `area` / `pie` / `waterfall` / `scatter` / `heatmap` / `radar` / `funnel` / `gauge` / `treemap` / `candlestick` / `combo`
+
+图表主题：`default` / `cicc` / `goldman` / `dark`
+
+---
+
+## 项目结构
 
 ```
 typeset-engine/
-├── Dockerfile
-├── README.md              ← 本文件（给 AI agent 的完整指南）
-├── USAGE.md               ← CLI 详细用法
-├── scripts/
-│   ├── server.py          ← HTTP API 服务（端口 9090）
-│   ├── engine.py          ← CLI 主入口
-│   ├── render_pdf.py      ← PDF（Typst）
-│   ├── render_pptx.py     ← PPTX（python-pptx）
-│   ├── render_pptx_ai.py  ← AI PPT（Gemini + FFmpeg）
-│   ├── render_docx.py     ← DOCX（python-docx）
-│   ├── render_charts.py   ← 13 种图表（Plotly）
-│   ├── render_illustrate.py ← AI 配图（Gemini）
-│   ├── render_diagram.py  ← 技术架构图（SVG→PNG, rsvg-convert）
-│   └── file_diff.py       ← 文件对比
-├── styles/
+├── Dockerfile                        # Docker 构建文件
+├── README.md                         # 本文件
+├── USAGE.md                          # CLI 详细用法
+├── DOCS_INPUT_FORMAT.md              # DOCX 格式规范
+│
+├── scripts/                          # 渲染引擎
+│   ├── server.py                     # HTTP API 服务器（端口 9090）
+│   ├── render_pdf.py                 # PDF 渲染（Typst，15 主题）
+│   ├── render_docx.py                # DOCX 渲染（python-docx）
+│   ├── render_pptx.py                # PPTX 渲染（python-pptx，20 layout）
+│   ├── render_pptx_ai.py             # AI PPT（Gemini + FFmpeg）
+│   ├── render_charts.py              # 图表渲染（Plotly，13 种）
+│   ├── render_diagram.py             # 技术图渲染（SVG → PNG，rsvg-convert）
+│   ├── render_illustrate.py          # AI 配图（Gemini）
+│   ├── validate_docx.py              # DOCX JSON 校验
+│   └── file_diff.py                  # 文件对比
+│
+├── templates/                        # 排版模板
+│   ├── cicc-report.typ               # 投研报告 Typst 主模板
+│   ├── themes.typ                    # 15 个 PDF 主题配色定义
+│   ├── gongwen.typ                   # GB/T 9704 公文模板
+│   └── academic/                     # 学术论文模板
+│       ├── ieee/lib.typ              # IEEE 双栏论文
+│       ├── cn-paper/lib.typ          # 中文学术论文
+│       ├── working-paper/lib.typ     # SSRN 工作论文
+│       ├── sjtu-thesis/              # 上海交大学位论文（19 文件）
+│       ├── pku-thesis/               # 北京大学学位论文（7 文件）
+│       └── hust-thesis/              # 华中科大学位论文（25 文件）
+│
+├── references/                       # 技术图参考资料
+│   ├── diagram/                      # 7 种风格参考 + icons + 布局规范
+│   ├── diagram-templates/            # 10 种图类型 SVG 模板
+│   └── diagram-fixtures/             # 7 种风格 JSON 示例数据
+│
+├── fonts/                            # 公文字体
+│   ├── 方正小标宋GBK.TTF
+│   ├── SIMHEI.TTF
+│   ├── SIMFANG.TTF
+│   └── FZFS_GBK.ttf
+│
+├── styles/                           # AI PPT 风格定义
 │   ├── gradient-glass.md
 │   ├── vector-illustration.md
 │   └── ticket.md
-└── templates/
-    ├── cicc-report.typ
-    ├── themes.typ
-    └── html/
-        ├── viewer.html
-        └── video_viewer.html
+│
+└── tests/                            # 单元测试
 ```
 
-## 构建镜像
+---
 
-```bash
-cd /home/guyii/clawd/code/typeset-engine
-docker build -t typeset-engine:v1 .
-```
+## 依赖
+
+Docker 镜像包含：
+
+- **Typst 0.14.0** — PDF 排版引擎
+- **python-pptx** — PPTX 生成
+- **python-docx** — DOCX 生成
+- **Plotly + Kaleido + Chrome** — 图表渲染
+- **librsvg2 (rsvg-convert)** — SVG → PNG
+- **FFmpeg** — 视频合成
+- **ImageMagick** — 图片处理
+- **Google Gemini SDK** — AI 图片/PPT 生成
+
+---
+
+## License
+
+MIT
