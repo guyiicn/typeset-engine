@@ -1184,6 +1184,245 @@ class PptxBuilder:
                         font_size=9, color=RGBColor(0x66, 0x66, 0x66),
                         font_name=self.theme['font_body_fallback'])
 
+    def add_waterfall_chart_slide(self, title: str, items: List[Dict],
+                                     currency: str = '$m', source: str = ''):
+        """瀑布图 — 收入分解/桥接分析
+
+        items = [
+            {"label": "Revenue 2025", "value": 1000, "type": "total"},
+            {"label": "Volume Growth", "value": 150, "type": "increase"},
+            {"label": "Price Increase", "value": 80, "type": "increase"},
+            {"label": "FX Impact", "value": -50, "type": "decrease"},
+            {"label": "Divestitures", "value": -30, "type": "decrease"},
+            {"label": "Revenue 2026", "value": 1150, "type": "total"},
+        ]
+        """
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        self._add_bg(slide)
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0), Inches(0), self.slide_w, Inches(0.06),
+                        self.theme['primary'])
+
+        self._add_text(slide, title,
+                        Inches(0.8), Inches(0.25), Inches(11), Inches(0.5),
+                        font_size=22, bold=True, color=self.theme['primary'])
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0.8), Inches(0.8), Inches(11.5), Inches(0.015),
+                        self.theme['primary'])
+
+        if not items:
+            return
+
+        n = len(items)
+        chart_left = 1.2
+        chart_width = 11.0
+        chart_bottom = 6.2
+        bar_area_height = 4.5
+        bar_w = min(chart_width / n * 0.7, 1.2)
+        gap = chart_width / n
+
+        # 计算最大值用于缩放
+        all_vals = []
+        running = 0
+        for it in items:
+            if it.get('type') == 'total':
+                all_vals.append(it['value'])
+                running = it['value']
+            else:
+                all_vals.append(running)
+                running += it['value']
+                all_vals.append(running)
+        max_val = max(all_vals) * 1.15
+        scale = bar_area_height / max_val if max_val > 0 else 1
+
+        # 底部基线
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(chart_left), Inches(chart_bottom),
+                        Inches(chart_width), Inches(0.015),
+                        RGBColor(0x80, 0x80, 0x80))
+
+        running = 0
+        colors_map = {
+            'total': self.theme['primary'],
+            'increase': RGBColor(0x54, 0x82, 0x35),
+            'decrease': RGBColor(0xC0, 0x00, 0x00),
+        }
+
+        for i, it in enumerate(items):
+            x = chart_left + i * gap + (gap - bar_w) / 2
+            val = it['value']
+            bar_type = it.get('type', 'increase' if val >= 0 else 'decrease')
+            color = colors_map.get(bar_type, self.theme['primary'])
+
+            if bar_type == 'total':
+                bar_h = val * scale
+                bar_top = chart_bottom - bar_h
+                running = val
+            else:
+                if val >= 0:
+                    bar_h = val * scale
+                    bar_top = chart_bottom - running * scale - bar_h
+                else:
+                    bar_h = abs(val) * scale
+                    bar_top = chart_bottom - running * scale
+                running += val
+
+            bar = slide.shapes.add_shape(
+                MSO_SHAPE.RECTANGLE,
+                Inches(x), Inches(bar_top),
+                Inches(bar_w), Inches(max(bar_h, 0.05)))
+            bar.fill.solid()
+            bar.fill.fore_color.rgb = color
+            bar.line.fill.background()
+
+            # 数值标注
+            val_text = f"{currency}{abs(val):,.0f}" if bar_type == 'total' else (
+                f"+{val:,.0f}" if val >= 0 else f"{val:,.0f}")
+            self._add_text(slide, val_text,
+                            Inches(x - 0.1), Inches(bar_top - 0.3),
+                            Inches(bar_w + 0.2), Inches(0.25),
+                            font_size=8, bold=True, color=color,
+                            alignment=PP_ALIGN.CENTER,
+                            font_name=self.theme['font_body_fallback'])
+
+            # 标签
+            self._add_text(slide, it.get('label', ''),
+                            Inches(x - 0.2), Inches(chart_bottom + 0.05),
+                            Inches(bar_w + 0.4), Inches(0.5),
+                            font_size=8, color=self.theme['text_dark'],
+                            alignment=PP_ALIGN.CENTER,
+                            font_name=self.theme['font_body_fallback'])
+
+        if source:
+            self._add_text(slide, f"Source: {source}",
+                            Inches(0.5), Inches(6.7), Inches(12), Inches(0.3),
+                            font_size=7, color=RGBColor(0x80, 0x80, 0x80),
+                            font_name=self.theme['font_body_fallback'])
+
+    def add_org_chart_slide(self, title: str, root: Dict, source: str = ''):
+        """组织架构图 — 树状管理层结构
+
+        root = {
+            "name": "CEO",
+            "title": "John Smith",
+            "children": [
+                {"name": "CFO", "title": "Jane Doe", "children": [...]},
+                {"name": "COO", "title": "Bob Lee"},
+            ]
+        }
+        """
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        self._add_bg(slide)
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0), Inches(0), self.slide_w, Inches(0.06),
+                        self.theme['primary'])
+
+        self._add_text(slide, title,
+                        Inches(0.8), Inches(0.25), Inches(11), Inches(0.5),
+                        font_size=22, bold=True, color=self.theme['primary'])
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0.8), Inches(0.8), Inches(11.5), Inches(0.015),
+                        self.theme['primary'])
+
+        if not root:
+            return
+
+        def draw_node(slide, name, person_title, cx, cy, w=1.8, h=0.7, is_root=False):
+            """画一个节点框"""
+            x = cx - w / 2
+            color = self.theme['primary'] if is_root else self.theme['table_alt']
+            text_color = self.theme['text_light'] if is_root else self.theme['text_dark']
+
+            box = slide.shapes.add_shape(
+                MSO_SHAPE.ROUNDED_RECTANGLE,
+                Inches(x), Inches(cy), Inches(w), Inches(h))
+            box.fill.solid()
+            box.fill.fore_color.rgb = color
+            box.line.color.rgb = self.theme['primary']
+            box.line.width = Pt(1.5)
+
+            # 职位名
+            self._add_text(slide, name,
+                            Inches(x + 0.05), Inches(cy + 0.05),
+                            Inches(w - 0.1), Inches(0.3),
+                            font_size=10, bold=True, color=text_color,
+                            alignment=PP_ALIGN.CENTER,
+                            font_name=self.theme['font_body_fallback'])
+            # 人名
+            if person_title:
+                self._add_text(slide, person_title,
+                                Inches(x + 0.05), Inches(cy + 0.35),
+                                Inches(w - 0.1), Inches(0.25),
+                                font_size=8, color=text_color,
+                                alignment=PP_ALIGN.CENTER,
+                                font_name=self.theme['font_body_fallback'])
+
+        def draw_line(slide, x1, y1, x2, y2):
+            """画连接线"""
+            # 用 L 形正交线（先竖后横再竖）
+            mid_y = (y1 + y2) / 2
+            for (ax, ay, bx, by) in [
+                (x1, y1, x1, mid_y),
+                (x1, mid_y, x2, mid_y),
+                (x2, mid_y, x2, y2),
+            ]:
+                ln = slide.shapes.add_shape(
+                    MSO_SHAPE.RECTANGLE,
+                    Inches(min(ax, bx)), Inches(min(ay, by)),
+                    Inches(max(abs(bx - ax), 0.015)), Inches(max(abs(by - ay), 0.015)))
+                ln.fill.solid()
+                ln.fill.fore_color.rgb = RGBColor(0x80, 0x80, 0x80)
+                ln.line.fill.background()
+
+        # 层级布局
+        # Root
+        root_cx = 6.75
+        root_cy = 1.2
+        draw_node(slide, root.get('name', ''), root.get('title', ''),
+                  root_cx, root_cy, is_root=True)
+
+        children = root.get('children', [])
+        if not children:
+            return
+
+        # Level 1
+        n1 = len(children)
+        l1_width = min(n1 * 2.2, 11.0)
+        l1_start = root_cx - l1_width / 2 + 1.1
+        l1_gap = l1_width / n1
+        l1_cy = 2.8
+
+        for i, child in enumerate(children):
+            child_cx = l1_start + i * l1_gap
+            draw_node(slide, child.get('name', ''), child.get('title', ''),
+                      child_cx, l1_cy)
+            draw_line(slide, root_cx, root_cy + 0.7, child_cx, l1_cy)
+
+            # Level 2
+            grandchildren = child.get('children', [])
+            if grandchildren:
+                n2 = len(grandchildren)
+                l2_width = min(n2 * 1.8, l1_gap * 0.9)
+                l2_start = child_cx - l2_width / 2 + 0.9
+                l2_gap = l2_width / max(n2, 1)
+                l2_cy = 4.4
+
+                for j, gc in enumerate(grandchildren[:4]):
+                    gc_cx = l2_start + j * l2_gap
+                    draw_node(slide, gc.get('name', ''), gc.get('title', ''),
+                              gc_cx, l2_cy, w=1.5, h=0.6)
+                    draw_line(slide, child_cx, l1_cy + 0.7, gc_cx, l2_cy)
+
+        if source:
+            self._add_text(slide, f"Source: {source}",
+                            Inches(0.5), Inches(6.7), Inches(12), Inches(0.3),
+                            font_size=7, color=RGBColor(0x80, 0x80, 0x80),
+                            font_name=self.theme['font_body_fallback'])
+
     def save(self, output_path: str):
         """保存 PPTX"""
         os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
@@ -1361,6 +1600,19 @@ def render_pptx(data: Dict, output_path: str, template: str = 'default'):
             builder.add_disclaimer_slide(
                 text=slide_data.get('content', slide_data.get('text', '')),
                 title=slide_data.get('title', 'Important Disclosures'),
+            )
+        elif layout == 'waterfall':
+            builder.add_waterfall_chart_slide(
+                title=slide_data.get('title', 'Bridge Analysis'),
+                items=slide_data.get('items', []),
+                currency=slide_data.get('currency', '$m'),
+                source=slide_data.get('source', ''),
+            )
+        elif layout == 'org_chart':
+            builder.add_org_chart_slide(
+                title=slide_data.get('title', 'Organization Structure'),
+                root=slide_data.get('root', {}),
+                source=slide_data.get('source', ''),
             )
 
     builder.save(output_path)
