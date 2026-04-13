@@ -1389,33 +1389,45 @@ class PptxBuilder:
         if not children:
             return
 
-        # Level 1
-        n1 = len(children)
-        l1_width = min(n1 * 2.2, 11.0)
-        l1_start = root_cx - l1_width / 2 + 1.1
-        l1_gap = l1_width / n1
-        l1_cy = 2.8
+        # 计算所有叶子节点数量以确定总宽度
+        total_leaves = 0
+        for child in children:
+            gc = child.get('children', [])
+            total_leaves += max(len(gc[:3]), 1)  # 每个子节点至少占1个位
+
+        leaf_w = 2.0  # 每个叶子节点占用宽度
+        total_width = total_leaves * leaf_w
+        if total_width > 11.0:
+            leaf_w = 11.0 / total_leaves
+            total_width = 11.0
+
+        # Level 1 + Level 2
+        l1_cy = 2.6
+        l2_cy = 4.5
+        leaf_idx = 0
 
         for i, child in enumerate(children):
-            child_cx = l1_start + i * l1_gap
+            grandchildren = child.get('children', [])[:3]
+            n_gc = max(len(grandchildren), 1)
+
+            # 该子节点占用的叶子位数
+            child_start_leaf = leaf_idx
+            child_end_leaf = leaf_idx + n_gc
+
+            # 子节点居中于其叶子范围
+            child_cx = root_cx - total_width / 2 + (child_start_leaf + n_gc / 2) * leaf_w
             draw_node(slide, child.get('name', ''), child.get('title', ''),
                       child_cx, l1_cy)
             draw_line(slide, root_cx, root_cy + 0.7, child_cx, l1_cy)
 
             # Level 2
-            grandchildren = child.get('children', [])
-            if grandchildren:
-                n2 = len(grandchildren)
-                l2_width = min(n2 * 1.8, l1_gap * 0.9)
-                l2_start = child_cx - l2_width / 2 + 0.9
-                l2_gap = l2_width / max(n2, 1)
-                l2_cy = 4.4
+            for j, gc in enumerate(grandchildren):
+                gc_cx = root_cx - total_width / 2 + (child_start_leaf + j + 0.5) * leaf_w
+                draw_node(slide, gc.get('name', ''), gc.get('title', ''),
+                          gc_cx, l2_cy, w=1.6, h=0.6)
+                draw_line(slide, child_cx, l1_cy + 0.7, gc_cx, l2_cy)
 
-                for j, gc in enumerate(grandchildren[:4]):
-                    gc_cx = l2_start + j * l2_gap
-                    draw_node(slide, gc.get('name', ''), gc.get('title', ''),
-                              gc_cx, l2_cy, w=1.5, h=0.6)
-                    draw_line(slide, child_cx, l1_cy + 0.7, gc_cx, l2_cy)
+            leaf_idx = child_end_leaf
 
         if source:
             self._add_text(slide, f"Source: {source}",
