@@ -961,6 +961,229 @@ class PptxBuilder:
                             font_size=7, color=RGBColor(0x80, 0x80, 0x80),
                             font_name=self.theme['font_body_fallback'])
 
+    def add_sensitivity_matrix_slide(self, title: str, row_label: str,
+                                        col_label: str, row_values: List,
+                                        col_values: List, matrix: List[List],
+                                        highlight_row: int = None,
+                                        highlight_col: int = None,
+                                        source: str = ''):
+        """敏感性分析矩阵 — WACC × Terminal Growth Rate 二维表
+
+        row_values = [1.0, 1.5, 2.0, 2.5]     # Terminal Growth Rate
+        col_values = [8.0, 9.0, 10.0, 11.0]    # WACC
+        matrix = [[42, 38, 35, 32], [45, 41, 37, 34], ...]
+        highlight_row/col = base case 位置索引
+        """
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        self._add_bg(slide)
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0), Inches(0), self.slide_w, Inches(0.06),
+                        self.theme['primary'])
+
+        self._add_text(slide, title,
+                        Inches(0.8), Inches(0.25), Inches(11), Inches(0.5),
+                        font_size=22, bold=True, color=self.theme['primary'])
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0.8), Inches(0.8), Inches(11.5), Inches(0.015),
+                        self.theme['primary'])
+
+        n_rows = len(row_values) + 1  # +1 for col header
+        n_cols = len(col_values) + 1  # +1 for row header
+
+        # 列标签
+        self._add_text(slide, col_label,
+                        Inches(4), Inches(1.2), Inches(6), Inches(0.4),
+                        font_size=12, bold=True, color=self.theme['primary'],
+                        alignment=PP_ALIGN.CENTER)
+
+        # 行标签（竖向）
+        self._add_text(slide, row_label,
+                        Inches(1.5), Inches(3.5), Inches(1.5), Inches(0.4),
+                        font_size=12, bold=True, color=self.theme['primary'],
+                        alignment=PP_ALIGN.CENTER)
+
+        # 表格
+        table_shape = slide.shapes.add_table(
+            n_rows, n_cols,
+            Inches(3), Inches(1.7),
+            Inches(8), Inches(4.5)
+        )
+        tbl = table_shape.table
+
+        # 左上角空白
+        cell = tbl.cell(0, 0)
+        cell.text = f"{row_label} \\ {col_label}"
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = self.theme['primary']
+        for p in cell.text_frame.paragraphs:
+            p.font.size = Pt(8)
+            p.font.bold = True
+            p.font.color.rgb = self.theme['text_light']
+            p.font.name = self.theme['font_body_fallback']
+            p.alignment = PP_ALIGN.CENTER
+
+        # 列头
+        for j, cv in enumerate(col_values):
+            cell = tbl.cell(0, j + 1)
+            cell.text = f"{cv}%"
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = self.theme['primary']
+            for p in cell.text_frame.paragraphs:
+                p.font.size = Pt(10)
+                p.font.bold = True
+                p.font.color.rgb = self.theme['text_light']
+                p.font.name = self.theme['font_body_fallback']
+                p.alignment = PP_ALIGN.CENTER
+
+        # 行头 + 数据
+        for i, rv in enumerate(row_values):
+            # 行头
+            cell = tbl.cell(i + 1, 0)
+            cell.text = f"{rv}%"
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = self.theme['table_alt']
+            for p in cell.text_frame.paragraphs:
+                p.font.size = Pt(10)
+                p.font.bold = True
+                p.font.color.rgb = self.theme['primary']
+                p.font.name = self.theme['font_body_fallback']
+                p.alignment = PP_ALIGN.CENTER
+
+            # 数据
+            for j, val in enumerate(matrix[i] if i < len(matrix) else []):
+                cell = tbl.cell(i + 1, j + 1)
+                cell.text = f"${val}" if isinstance(val, (int, float)) else str(val)
+
+                # Base case 高亮
+                is_highlight = (highlight_row is not None and highlight_col is not None
+                                and i == highlight_row and j == highlight_col)
+                if is_highlight:
+                    cell.fill.solid()
+                    cell.fill.fore_color.rgb = self.theme['primary']
+                    fg_color = self.theme['text_light']
+                else:
+                    fg_color = self.theme['text_dark']
+
+                for p in cell.text_frame.paragraphs:
+                    p.font.size = Pt(11)
+                    p.font.color.rgb = fg_color
+                    p.font.name = self.theme['font_body_fallback']
+                    p.alignment = PP_ALIGN.CENTER
+                    if is_highlight:
+                        p.font.bold = True
+
+        if source:
+            self._add_text(slide, f"Source: {source}",
+                            Inches(0.5), Inches(6.7), Inches(12), Inches(0.3),
+                            font_size=7, color=RGBColor(0x80, 0x80, 0x80),
+                            font_name=self.theme['font_body_fallback'])
+
+    def add_transaction_overview_slide(self, title: str, key_points: List[str],
+                                        terms: List[Dict], source: str = ''):
+        """交易概览 — 左侧文字要点 + 右侧关键条款表格
+
+        key_points = ["要点1", "要点2", ...]
+        terms = [{"term": "Transaction Value", "value": "$1.5bn"}, ...]
+        """
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        self._add_bg(slide)
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0), Inches(0), self.slide_w, Inches(0.06),
+                        self.theme['primary'])
+
+        self._add_text(slide, title,
+                        Inches(0.8), Inches(0.25), Inches(11), Inches(0.5),
+                        font_size=22, bold=True, color=self.theme['primary'])
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0.8), Inches(0.8), Inches(11.5), Inches(0.015),
+                        self.theme['primary'])
+
+        # 左侧要点（40%）
+        self._add_text(slide, "Key Highlights",
+                        Inches(0.8), Inches(1.2), Inches(5), Inches(0.4),
+                        font_size=14, bold=True, color=self.theme['primary'])
+
+        y = Inches(1.8)
+        for pt in key_points[:8]:
+            self._add_text(slide, f"•  {pt}",
+                            Inches(1.0), y, Inches(4.8), Inches(0.45),
+                            font_size=11, color=self.theme['text_dark'],
+                            font_name=self.theme['font_body'])
+            y += Inches(0.5)
+
+        # 右侧条款表格（55%）
+        if terms:
+            n_rows = len(terms) + 1
+            t_shape = slide.shapes.add_table(
+                n_rows, 2, Inches(6.5), Inches(1.2), Inches(6), Inches(5)
+            )
+            tbl = t_shape.table
+
+            for j, h in enumerate(["Term", "Details"]):
+                cell = tbl.cell(0, j)
+                cell.text = h
+                cell.fill.solid()
+                cell.fill.fore_color.rgb = self.theme['primary']
+                for p in cell.text_frame.paragraphs:
+                    p.font.size = Pt(10)
+                    p.font.bold = True
+                    p.font.color.rgb = self.theme['text_light']
+                    p.font.name = self.theme['font_body_fallback']
+
+            for i, t in enumerate(terms):
+                tbl.cell(i+1, 0).text = t.get('term', '')
+                tbl.cell(i+1, 1).text = t.get('value', '')
+                for j in range(2):
+                    if i % 2 == 1:
+                        tbl.cell(i+1, j).fill.solid()
+                        tbl.cell(i+1, j).fill.fore_color.rgb = self.theme['table_alt']
+                    for p in tbl.cell(i+1, j).text_frame.paragraphs:
+                        p.font.size = Pt(10)
+                        p.font.color.rgb = self.theme['text_dark']
+                        p.font.name = self.theme['font_body_fallback']
+                        p.font.bold = (j == 0)
+
+        if source:
+            self._add_text(slide, f"Source: {source}",
+                            Inches(0.5), Inches(6.7), Inches(12), Inches(0.3),
+                            font_size=7, color=RGBColor(0x80, 0x80, 0x80),
+                            font_name=self.theme['font_body_fallback'])
+
+    def add_disclaimer_slide(self, text: str = '', title: str = 'Important Disclosures'):
+        """免责声明尾页 — 小字体法律文本"""
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        self._add_bg(slide)
+
+        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
+                        Inches(0), Inches(0), self.slide_w, Inches(0.06),
+                        self.theme['primary'])
+
+        self._add_text(slide, title,
+                        Inches(0.8), Inches(0.4), Inches(11), Inches(0.5),
+                        font_size=18, bold=True, color=self.theme['primary'])
+
+        default_text = (
+            "This document is confidential and has been prepared by the Investment Banking Division solely for "
+            "informational purposes. It is not intended as an offer or solicitation for the purchase or sale of "
+            "any financial instrument. The information contained herein has been obtained from sources believed "
+            "to be reliable but is not guaranteed as to its accuracy or completeness.\n\n"
+            "Past performance is not indicative of future results. Any projections, estimates, forecasts, targets, "
+            "prospects and/or opinions expressed in these materials are subject to change without notice and may "
+            "differ or be contrary to opinions expressed by others.\n\n"
+            "This presentation may not be reproduced, distributed or transmitted, in whole or in part, without "
+            "the prior written consent of the Investment Banking Division. By accepting this document, the "
+            "recipient agrees to be bound by the foregoing limitations."
+        )
+
+        self._add_text(slide, text or default_text,
+                        Inches(0.8), Inches(1.2), Inches(11.5), Inches(5.5),
+                        font_size=9, color=RGBColor(0x66, 0x66, 0x66),
+                        font_name=self.theme['font_body_fallback'])
+
     def save(self, output_path: str):
         """保存 PPTX"""
         os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
@@ -1113,6 +1336,31 @@ def render_pptx(data: Dict, output_path: str, template: str = 'default'):
                 uses=slide_data.get('uses', []),
                 currency=slide_data.get('currency', '$m'),
                 source_note=slide_data.get('source', ''),
+            )
+
+        elif layout == 'sensitivity_matrix':
+            builder.add_sensitivity_matrix_slide(
+                title=slide_data.get('title', 'Sensitivity Analysis'),
+                row_label=slide_data.get('row_label', 'Terminal Growth Rate'),
+                col_label=slide_data.get('col_label', 'WACC'),
+                row_values=slide_data.get('row_values', []),
+                col_values=slide_data.get('col_values', []),
+                matrix=slide_data.get('matrix', []),
+                highlight_row=slide_data.get('highlight_row'),
+                highlight_col=slide_data.get('highlight_col'),
+                source=slide_data.get('source', ''),
+            )
+        elif layout == 'transaction_overview':
+            builder.add_transaction_overview_slide(
+                title=slide_data.get('title', 'Transaction Overview'),
+                key_points=slide_data.get('key_points', slide_data.get('bullets', [])),
+                terms=slide_data.get('terms', []),
+                source=slide_data.get('source', ''),
+            )
+        elif layout == 'disclaimer':
+            builder.add_disclaimer_slide(
+                text=slide_data.get('content', slide_data.get('text', '')),
+                title=slide_data.get('title', 'Important Disclosures'),
             )
 
     builder.save(output_path)
