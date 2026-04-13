@@ -1395,15 +1395,15 @@ class PptxBuilder:
             gc = child.get('children', [])
             total_leaves += max(len(gc[:3]), 1)  # 每个子节点至少占1个位
 
-        leaf_w = 2.0  # 每个叶子节点占用宽度
+        leaf_w = 2.5  # 每个叶子节点占用宽度（加宽间距）
         total_width = total_leaves * leaf_w
-        if total_width > 11.0:
-            leaf_w = 11.0 / total_leaves
-            total_width = 11.0
+        if total_width > 12.0:
+            leaf_w = 12.0 / total_leaves
+            total_width = 12.0
 
-        # Level 1 + Level 2
-        l1_cy = 2.6
-        l2_cy = 4.5
+        # Level 1 + Level 2（层间距加大）
+        l1_cy = 2.4
+        l2_cy = 4.8
         leaf_idx = 0
 
         for i, child in enumerate(children):
