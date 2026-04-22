@@ -32,6 +32,8 @@ RUN pip install --no-cache-dir \
     "kaleido>=1.0.0" \
     google-genai \
     python-dotenv \
+    weasyprint \
+    pypdf \
     || echo "Some packages may have warnings, continuing"
 
 # Chrome 系统依赖 + 中文字体 + 公文字体 + FFmpeg

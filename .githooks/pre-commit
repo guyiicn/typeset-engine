@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# typeset-engine pre-commit hook
+#
+# 在 commit 前扫描即将提交的 templates/ styles/ scripts/ 文件
+# 对照 kami 美学宪法（9 条约束）。
+#
+# 激活（一次性）：
+#   git config core.hooksPath .githooks
+#
+# 跳过（紧急情况）：
+#   git commit --no-verify
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+VALIDATOR="$REPO_ROOT/scripts/validate_kami.py"
+
+if [ ! -f "$VALIDATOR" ]; then
+    echo "pre-commit: $VALIDATOR 不存在，跳过 kami 扫描"
+    exit 0
+fi
+
+# 只检查本次 commit 暂存的相关文件
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR |
+    grep -E '^(templates/|styles/|scripts/).*\.(html|css|typ|py|md)$' |
+    grep -vE '(validate_kami|validate_docx)\.py$' || true)
+
+if [ -z "$STAGED" ]; then
+    exit 0
+fi
+
+echo "── kami 美学扫描（$(echo "$STAGED" | wc -l | tr -d ' ') 个暂存文件）──"
+
+# 把相对路径转成绝对路径交给扫描器
+ABS_PATHS=$(echo "$STAGED" | sed "s|^|$REPO_ROOT/|")
+
+if python3 "$VALIDATOR" $ABS_PATHS; then
+    echo "✓ 美学扫描通过"
+    exit 0
+else
+    EXIT=$?
+    echo ""
+    echo "✗ kami 美学扫描发现违规（exit=$EXIT）。"
+    echo "  参考: ~/.openclaw/skills/typeset-engine/references/design-constraints.md"
+    echo "  跳过: git commit --no-verify（不推荐）"
+    exit 1
+fi

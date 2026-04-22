@@ -79,6 +79,41 @@ class TypesetHandler(BaseHTTPRequestHandler):
             fonts = sorted(set(f.name for f in fm.fontManager.ttflist))
             self._send_json({'count': len(fonts), 'fonts': fonts})
 
+        elif path.startswith('/kami/template/'):
+            # GET /kami/template/{name}?lang=en — 返回模板源码
+            tpl_name = path[len('/kami/template/'):]
+            lang = self._get_param(parse_qs(urlparse(self.path).query), 'lang', 'zh')
+            from render_kami import KAMI_DIR, DOC_TYPES
+            if tpl_name not in DOC_TYPES:
+                self._send_error(404, f"unknown template '{tpl_name}', pick from {sorted(DOC_TYPES)}")
+                return
+            fname = f'{tpl_name}-en.html' if lang == 'en' else f'{tpl_name}.html'
+            fpath = KAMI_DIR / fname
+            if not fpath.exists():
+                self._send_error(404, f'template file not found: {fname}')
+                return
+            body = fpath.read_bytes()
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        elif path == '/kami/templates':
+            from render_kami import KAMI_DIR, DOC_TYPES, PAGE_LIMITS
+            items = []
+            for doc_type in sorted(DOC_TYPES):
+                for lang in ('zh', 'en'):
+                    fname = f'{doc_type}-en.html' if lang == 'en' else f'{doc_type}.html'
+                    if (KAMI_DIR / fname).exists():
+                        items.append({
+                            'doc_type': doc_type,
+                            'language': lang,
+                            'template': fname,
+                            'pages': PAGE_LIMITS.get(doc_type),
+                        })
+            self._send_json({'templates': items})
+
         elif path == '/capabilities':
             self._send_json({
                 'commands': {
@@ -97,6 +132,24 @@ class TypesetHandler(BaseHTTPRequestHandler):
                                           'format': 'png|svg|both', 'validate': 'true = validate only'}},
                     'illustrate': {'method': 'POST', 'path': '/render/illustrate', 'requires': 'GEMINI_API_KEY',
                                    'styles': ['gradient-glass', 'vector-illustration', 'ticket']},
+                    'kami': {'method': 'POST', 'path': '/render/kami',
+                             'description': 'kami 主题（暖米纸 + 油墨蓝 + serif）HTML → PDF',
+                             'doc_types': ['one-pager', 'long-doc', 'letter', 'portfolio', 'resume'],
+                             'languages': ['zh', 'en'],
+                             'body_modes': {
+                                 'html': 'full HTML string',
+                                 'body_html': 'body innerHTML (server loads template)',
+                                 'slots': '{{key}} dict replacement',
+                             },
+                             'related': {
+                                 'list-templates': 'GET /kami/templates',
+                                 'fetch-template': 'GET /kami/template/{doc_type}?lang=zh|en',
+                             }},
+                    'validate-css': {'method': 'POST', 'path': '/validate/css',
+                                     'description': 'Kami 美学宪法扫描（冷灰/rgba/bold/行高等 9 条约束）',
+                                     'body': {'content': 'required str', 'filename': 'optional hint for ext-based rules', 'only': 'optional list'},
+                                     'rules': ['rgba', 'coolgray', 'white', 'lineheight',
+                                               'boldserif', 'hardshadow', 'thinborder', 'vh', 'flexbreak']},
                 },
                 'styles_endpoint': '/styles',
                 'health_endpoint': '/health',
@@ -132,6 +185,10 @@ class TypesetHandler(BaseHTTPRequestHandler):
                 self._handle_diagram(data, params)
             elif path == '/render/illustrate':
                 self._handle_illustrate(data, params)
+            elif path == '/validate/css':
+                self._handle_validate_css(data, params)
+            elif path == '/render/kami':
+                self._handle_render_kami(data, params)
             else:
                 self._send_error(404, f'Unknown endpoint: {path}')
         except Exception as e:
@@ -271,6 +328,117 @@ class TypesetHandler(BaseHTTPRequestHandler):
             os.unlink(out_path)
         else:
             self._send_error(500, 'Image generation failed')
+
+    def _handle_render_kami(self, data, params):
+        """kami 主题 HTML → PDF（WeasyPrint 后端）
+
+        body 三种模式（优先级：html > body_html > slots）：
+          1. 整 HTML: {"html": "<!doctype html>...</html>"}
+          2. 模板+body替换: {"doc_type": "resume", "language": "en", "body_html": "..."}
+          3. 模板+slots替换: {"doc_type": "one-pager", "language": "zh",
+                             "slots": {"title": "..."}}
+        """
+        from render_kami import render_html, render_template, KAMI_DIR
+
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False,
+                                         dir=OUTPUT_DIR) as f:
+            out_path = f.name
+
+        try:
+            if data.get('html'):
+                base_url = data.get('base_url') or str(KAMI_DIR)
+                result = render_html(data['html'], base_url, out_path)
+            else:
+                doc_type = data.get('doc_type') or self._get_param(params, 'doc_type')
+                language = data.get('language') or self._get_param(params, 'lang', 'zh')
+                if not doc_type:
+                    self._send_error(400,
+                        "'doc_type' is required (one of: "
+                        "one-pager, long-doc, letter, portfolio, resume) "
+                        "— or send full 'html' field instead")
+                    return
+                result = render_template(
+                    doc_type=doc_type,
+                    language=language,
+                    body_html=data.get('body_html'),
+                    slots=data.get('slots'),
+                    out_path=out_path,
+                )
+
+            # 成功：把 PDF 作为附件返回；附加 meta 进 headers 方便调试
+            with open(out_path, 'rb') as f:
+                pdf_bytes = f.read()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/pdf')
+            self.send_header('Content-Length', str(len(pdf_bytes)))
+            self.send_header('Content-Disposition',
+                             f'attachment; filename="kami-{result.get("doc_type", "output")}.pdf"')
+            self.send_header('X-Kami-Pages', str(result.get('pages', 0)))
+            if result.get('warnings'):
+                self.send_header('X-Kami-Warnings', json.dumps(result['warnings'], ensure_ascii=False))
+            self.end_headers()
+            self.wfile.write(pdf_bytes)
+        except FileNotFoundError as e:
+            self._send_error(404, str(e))
+        except ValueError as e:
+            self._send_error(400, str(e))
+        finally:
+            try:
+                os.unlink(out_path)
+            except OSError:
+                pass
+
+    def _handle_validate_css(self, data, params):
+        """Kami 美学扫描：POST /validate/css
+        body: {
+          "content": "<style>.x { color: #3d3d3a; }</style>",
+          "filename": "sample.css",   # 可选，用于后缀判定（.html/.css/.typ/.py/.md）
+          "only": ["rgba", "coolgray"]  # 可选规则子集
+        }
+        返回 validate_kami.py --format json 的原样输出。
+        """
+        content = data.get('content', '')
+        if not content:
+            self._send_error(400, "'content' is required in body")
+            return
+        filename = data.get('filename') or 'ad-hoc.css'
+        only = data.get('only') or []
+        if only and not isinstance(only, list):
+            self._send_error(400, "'only' must be an array of rule names")
+            return
+
+        import subprocess as _sp
+        with tempfile.NamedTemporaryFile(mode='w', suffix=f'-{filename}',
+                                          delete=False, dir=OUTPUT_DIR,
+                                          encoding='utf-8') as f:
+            f.write(content)
+            tmp_path = f.name
+
+        try:
+            script = str(Path(__file__).parent / 'validate_kami.py')
+            args = [sys.executable, script, '--format', 'json', tmp_path]
+            if only:
+                args += ['--only', ','.join(only)]
+            result = _sp.run(args, capture_output=True, text=True, timeout=30)
+            # 退出码 0=干净 1=有 error；JSON 在 stdout
+            if result.returncode not in (0, 1):
+                self._send_error(500,
+                    f'validate_kami internal error (exit={result.returncode}): {result.stderr}')
+                return
+            try:
+                payload = json.loads(result.stdout)
+            except json.JSONDecodeError as e:
+                self._send_error(500, f'invalid JSON from validator: {e}')
+                return
+            # 对外抹掉临时文件路径，只留原 filename hint
+            for issue in payload.get('issues', []):
+                issue['file'] = filename
+            self._send_json(payload)
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
 
     # ─── Logging ────────────────────────────────
 

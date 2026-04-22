@@ -1,0 +1,26 @@
+# pre-commit 配置（https://pre-commit.com）
+#
+# 安装（一次性）:
+#   pip install pre-commit
+#   pre-commit install
+#
+# 之后每次 git commit 前自动跑。手动触发：
+#   pre-commit run --all-files
+#
+# 跳过（紧急情况）:
+#   git commit --no-verify
+
+repos:
+  - repo: local
+    hooks:
+      - id: validate-kami
+        name: Kami 美学扫描（9 条约束）
+        entry: python3 scripts/validate_kami.py
+        language: system
+        types_or: [html, css, python]
+        files: ^(templates/|styles/|scripts/).*\.(html|css|typ|py|md)$
+        pass_filenames: true
+        description: |
+          检查 typeset-engine 的模板和渲染器是否违反 kami 美学宪法
+          （冷灰、rgba、bold serif、行高、shadow 等）。
+          详见 ~/.openclaw/skills/typeset-engine/references/design-constraints.md
