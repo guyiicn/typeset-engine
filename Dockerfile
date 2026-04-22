@@ -90,5 +90,9 @@ RUN pip install --no-cache-dir python-pptx python-docx && \
 
 EXPOSE 9090
 
+# 覆盖 base image (finrobot:v2) 继承的 healthcheck — 它探 8001，我们服务在 9090
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:9090/health', timeout=5)" || exit 1
+
 # 默认启动 HTTP API 服务；也可覆盖为 CLI 模式
 CMD ["python", "scripts/server.py"]
