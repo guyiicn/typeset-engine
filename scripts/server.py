@@ -375,7 +375,8 @@ class TypesetHandler(BaseHTTPRequestHandler):
                              f'attachment; filename="kami-{result.get("doc_type", "output")}.pdf"')
             self.send_header('X-Kami-Pages', str(result.get('pages', 0)))
             if result.get('warnings'):
-                self.send_header('X-Kami-Warnings', json.dumps(result['warnings'], ensure_ascii=False))
+                # HTTP header 必须是 latin-1 可编码；保留 ensure_ascii=True 把中文转 \uXXXX
+                self.send_header('X-Kami-Warnings', json.dumps(result['warnings']))
             self.end_headers()
             self.wfile.write(pdf_bytes)
         except FileNotFoundError as e:
