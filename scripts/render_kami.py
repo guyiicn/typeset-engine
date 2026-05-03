@@ -27,15 +27,17 @@ ROOT = Path(__file__).resolve().parent.parent
 KAMI_DIR = ROOT / "templates" / "kami"
 
 # 支持的模板类型（中英文对应的模板名约定）
-DOC_TYPES = {"one-pager", "long-doc", "letter", "portfolio", "resume"}
+# long-doc-claude = long-doc 的 Anthropic/Claude 烧橙皮肤变体（用于触发词"claude 风格"）
+DOC_TYPES = {"one-pager", "long-doc", "long-doc-claude", "letter", "portfolio", "resume"}
 
 # 每个 doc_type 的页数硬约束（见 design-constraints 第 5 节）
 PAGE_LIMITS = {
-    "resume":    (1, 2),    # 严格 ≤2
-    "one-pager": (1, 1),    # 严格 = 1
-    "letter":    (1, 1),    # 严格 = 1
-    "long-doc":  (5, 9),    # 7±2 软
-    "portfolio": (4, 8),    # 6±2 软
+    "resume":           (1, 2),    # 严格 ≤2
+    "one-pager":        (1, 1),    # 严格 = 1
+    "letter":           (1, 1),    # 严格 = 1
+    "long-doc":         (5, 9),    # 7±2 软
+    "long-doc-claude":  (5, 80),   # 长篇研究报告（管理层讨论稿场景，60-70 页常见），上限放宽
+    "portfolio":        (4, 8),    # 6±2 软
 }
 
 
@@ -76,6 +78,7 @@ def render_template(
     body_html: str | None,
     slots: dict[str, Any] | None,
     out_path: str,
+    base_url: str | None = None,
 ) -> dict:
     """加载 templates/kami/{doc_type}[-en].html，用 body_html 或 slots 填入后渲染。
 
@@ -86,11 +89,15 @@ def render_template(
     两者都不传时使用模板原样（只验证渲染链路）。
 
     Args:
-        doc_type: one-pager / long-doc / letter / portfolio / resume
+        doc_type: one-pager / long-doc / long-doc-claude / letter / portfolio / resume
         language: 'zh' or 'en'
         body_html: 替换整个 body innerHTML（优先级最高）
         slots: {{key}} 占位符字典（当 body_html 未提供时使用）
         out_path: PDF 输出路径
+        base_url: WeasyPrint 解析相对路径的基点。
+                  - None（默认）：用 templates/kami/ 路径（适合模板自带资源）
+                  - 自定义路径：当 body_html 中引用了项目本地图片时（如长文报告
+                    包含 ./images/fig_*.png），传入项目目录绝对路径，确保图片能加载
     """
     if doc_type not in DOC_TYPES:
         raise ValueError(
@@ -103,16 +110,31 @@ def render_template(
     template_name = f"{doc_type}-en.html" if lang == "en" else f"{doc_type}.html"
     template_path = KAMI_DIR / template_name
     if not template_path.exists():
-        raise FileNotFoundError(f"模板不存在: {template_path}")
+        # 优雅降级：long-doc-claude-en.html 不存在时回退到 long-doc-en.html
+        # （Claude 皮肤目前仅 zh，但 long-doc 的 en 模板可作为后备）
+        if lang == "en" and doc_type.endswith("-claude"):
+            base = doc_type.rsplit("-claude", 1)[0]
+            fallback = KAMI_DIR / f"{base}-en.html"
+            if fallback.exists():
+                template_path = fallback
+                template_name = fallback.name
+            else:
+                raise FileNotFoundError(f"模板不存在: {template_path}")
+        else:
+            raise FileNotFoundError(f"模板不存在: {template_path}")
 
     html = template_path.read_text(encoding="utf-8")
 
+    # 两个填充阶段相互独立、可叠加：
+    # 1. slots 先替换模板里的 {{文档标题}} 等占位符（@page 页脚 / <title> 等模板自带 slot）
+    # 2. body_html 整段替换 <body>...</body> 内部
+    if slots:
+        html = _apply_slots(html, slots)
     if body_html is not None:
         html = _replace_body(html, body_html)
-    elif slots:
-        html = _apply_slots(html, slots)
 
-    result = render_html(html, base_url=str(KAMI_DIR), out_path=out_path)
+    effective_base = base_url if base_url is not None else str(KAMI_DIR)
+    result = render_html(html, base_url=effective_base, out_path=out_path)
     result["doc_type"] = doc_type
     result["language"] = lang
     result["template"] = template_name
@@ -189,7 +211,10 @@ def main() -> int:
     else:
         body = Path(args.body).read_text(encoding="utf-8") if args.body else None
         slots = json.loads(Path(args.slots).read_text()) if args.slots else None
-        result = render_template(args.template, args.lang, body, slots, args.out)
+        result = render_template(
+            args.template, args.lang, body, slots, args.out,
+            base_url=args.base_url,
+        )
 
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
