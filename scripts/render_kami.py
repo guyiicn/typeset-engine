@@ -27,8 +27,12 @@ ROOT = Path(__file__).resolve().parent.parent
 KAMI_DIR = ROOT / "templates" / "kami"
 
 # 支持的模板类型（中英文对应的模板名约定）
-# long-doc-claude = long-doc 的 Anthropic/Claude 烧橙皮肤变体（用于触发词"claude 风格"）
-DOC_TYPES = {"one-pager", "long-doc", "long-doc-claude", "letter", "portfolio", "resume"}
+# long-doc-claude = long-doc 的 Anthropic/Claude 烧橙皮肤变体（触发词"claude 风格"）
+# long-doc-openai = long-doc 的 OpenAI 极简白底+绿强调皮肤变体（触发词"openai 风格"）
+DOC_TYPES = {
+    "one-pager", "long-doc", "long-doc-claude", "long-doc-openai",
+    "letter", "portfolio", "resume",
+}
 
 # 每个 doc_type 的页数硬约束（见 design-constraints 第 5 节）
 PAGE_LIMITS = {
@@ -37,6 +41,7 @@ PAGE_LIMITS = {
     "letter":           (1, 1),    # 严格 = 1
     "long-doc":         (5, 9),    # 7±2 软
     "long-doc-claude":  (5, 80),   # 长篇研究报告（管理层讨论稿场景，60-70 页常见），上限放宽
+    "long-doc-openai":  (5, 100),  # OpenAI 极简风格长文（执行概要 + 多案例 + 方向 + 附录），上限放至 100
     "portfolio":        (4, 8),    # 6±2 软
 }
 
@@ -89,7 +94,7 @@ def render_template(
     两者都不传时使用模板原样（只验证渲染链路）。
 
     Args:
-        doc_type: one-pager / long-doc / long-doc-claude / letter / portfolio / resume
+        doc_type: one-pager / long-doc / long-doc-claude / long-doc-openai / letter / portfolio / resume
         language: 'zh' or 'en'
         body_html: 替换整个 body innerHTML（优先级最高）
         slots: {{key}} 占位符字典（当 body_html 未提供时使用）
@@ -110,15 +115,20 @@ def render_template(
     template_name = f"{doc_type}-en.html" if lang == "en" else f"{doc_type}.html"
     template_path = KAMI_DIR / template_name
     if not template_path.exists():
-        # 优雅降级：long-doc-claude-en.html 不存在时回退到 long-doc-en.html
-        # （Claude 皮肤目前仅 zh，但 long-doc 的 en 模板可作为后备）
-        if lang == "en" and doc_type.endswith("-claude"):
-            base = doc_type.rsplit("-claude", 1)[0]
-            fallback = KAMI_DIR / f"{base}-en.html"
-            if fallback.exists():
-                template_path = fallback
-                template_name = fallback.name
+        # 优雅降级：皮肤变体（-claude / -openai）的 -en.html 不存在时回退到 long-doc-en.html
+        # （皮肤变体目前仅 zh，但 long-doc 的 en 模板可作为后备）
+        if lang == "en" and ("-claude" in doc_type or "-openai" in doc_type):
+            for suffix in ("-claude", "-openai"):
+                if doc_type.endswith(suffix):
+                    base = doc_type.rsplit(suffix, 1)[0]
+                    fallback = KAMI_DIR / f"{base}-en.html"
+                    if fallback.exists():
+                        template_path = fallback
+                        template_name = fallback.name
+                        break
             else:
+                raise FileNotFoundError(f"模板不存在: {template_path}")
+            if not template_path.exists():
                 raise FileNotFoundError(f"模板不存在: {template_path}")
         else:
             raise FileNotFoundError(f"模板不存在: {template_path}")
