@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<!-- ==================================================================
+     LONG DOCUMENT TEMPLATE · STAR WARS SKIN
+     多页 A4 长文模板 · 星球大战视觉语言
+
+     设计原则：
+     - 封面 / 章节扉页 = 戏剧化（深空 + 标志性黄）
+     - 正文 = 米白可读底色 + 帝国灰文字 + 黄强调
+     - 不全黑底 80 页（油墨灾难 + 阅读疲劳）
+
+     调色板：
+       brand     #FFE81F（Star Wars 官方黄，强调与 logo）
+       text-1    #2C2E33（帝国灰，正文）
+       paper     #FFFCF2（旧海报米白底）
+       starfield #0E1A2B（深空蓝，封面/章节扉页）
+       jedi-blue #3B5BDB（一手 / 已验证）
+       sith-red  #C92A2A（三手 / 警告）
+       yoda-grn  #5C940D（二手 / 部分验证）
+       windu-prp #5F3DC4（反向回调）
+
+     字体：
+       - 中文标题：Source Han Sans Heavy（厚重 sans 模仿 SW logo 调性）
+       - 中文正文：Source Han Sans Regular
+       - 拉丁标题：Bebas Neue / Oswald Heavy（开源近似 Star Wars logo）
+
+     新增能力：
+       1. 4 类光剑色语义胶囊（蓝/绿/红/紫）
+       2. .crawl 类——开场字幕风格（italic + 字距加大）
+       3. EPISODE 罗马数字章节扉页
+       4. 封面星点效果（CSS 多重 box-shadow + radial-gradient）
+
+     使用前提：内部材料 / 私人项目 / 团建 / 创意内容
+     不适用：需要外发的客户提案 / 严肃投研 / 学术论文
+     免责：Inspired by Star Wars visual language;
+           not licensed by Lucasfilm Ltd. / Disney.
+
+     触发词：星球大战风格 / star wars 风格 / 光剑风格 / 银河风格
+     ================================================================== -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>{{文档标题}}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 22mm 22mm 22mm 22mm;
+    background: #FFFCF2;
+    @bottom-left {
+      content: "{{文档标题}}";
+      font-family: "Source Han Sans SC", -apple-system, sans-serif;
+      font-size: 8pt;
+      color: #6E6E80;
+      letter-spacing: 0.5pt;
+    }
+    @bottom-right {
+      content: counter(page);
+      font-family: "Source Han Sans SC", sans-serif;
+      font-size: 8pt;
+      color: #6E6E80;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+  @page:first {
+    @bottom-left { content: ""; }
+    @bottom-right { content: ""; }
+    background: #0E1A2B;
+  }
+
+  /* 章节扉页保持深空底（用 .episode 类标识） */
+  @page episode {
+    background: #0E1A2B;
+    @bottom-left { color: #6c7a8e; }
+    @bottom-right { color: #6c7a8e; }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --paper:        #FFFCF2;
+    --paper-alt:    #FFF8E6;
+    --text-1:       #2C2E33;
+    --text-2:       #3d3d3a;
+    --text-3:       #6E6E80;
+    --text-4:       #9CA0A8;
+    --border:       #E5E1D2;
+    --border-soft:  #ECE8DA;
+    --brand:        #FFE81F;
+    --brand-dark:   #C9B816;
+    --brand-bg:     #FFF8B8;
+    --starfield:    #0E1A2B;
+    --starfield-2:  #1a2540;
+    --jedi:         #3B5BDB;
+    --sith:         #C92A2A;
+    --yoda:         #5C940D;
+    --windu:        #5F3DC4;
+  }
+
+  html, body { background: var(--paper); }
+
+  body {
+    color: var(--text-1);
+    font-family: "Source Han Sans SC", "Noto Sans CJK SC",
+                 -apple-system, "PingFang SC", "Inter",
+                 Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.65;
+    font-weight: 400;
+  }
+
+  /* ========== COVER（深空 + 星点 + 巨型黄字标题）========== */
+  .cover {
+    min-height: 240mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 35mm 0 10mm 0;
+    break-after: page;
+    background:
+      radial-gradient(ellipse at top, var(--starfield-2) 0%, var(--starfield) 50%, #050a14 100%);
+    color: #FFFFFF;
+    /* 内边距覆盖到 @page 范围外，需配合负 margin trick */
+    margin: -22mm -22mm 0 -22mm;
+    padding-left: 22mm;
+    padding-right: 22mm;
+  }
+  /* 星点效果：多个 radial-gradient 叠加，模拟星空 */
+  .cover-stars {
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(1pt at 8% 12%, #fff 50%, transparent 60%),
+      radial-gradient(0.8pt at 22% 30%, #fff 50%, transparent 60%),
+      radial-gradient(1.2pt at 38% 18%, #fff 50%, transparent 60%),
+      radial-gradient(0.6pt at 52% 42%, #fff 50%, transparent 60%),
+      radial-gradient(1pt at 68% 25%, #fff 50%, transparent 60%),
+      radial-gradient(0.8pt at 80% 50%, #fff 50%, transparent 60%),
+      radial-gradient(0.6pt at 92% 32%, #fff 50%, transparent 60%),
+      radial-gradient(1pt at 15% 55%, #fff 50%, transparent 60%),
+      radial-gradient(0.8pt at 30% 68%, #fff 50%, transparent 60%),
+      radial-gradient(0.6pt at 45% 82%, #fff 50%, transparent 60%),
+      radial-gradient(1pt at 60% 70%, #fff 50%, transparent 60%),
+      radial-gradient(0.8pt at 75% 85%, #fff 50%, transparent 60%),
+      radial-gradient(0.6pt at 88% 75%, #fff 50%, transparent 60%);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+  .cover-eyebrow {
+    font-size: 10pt;
+    color: var(--jedi);
+    letter-spacing: 4pt;
+    text-transform: uppercase;
+    margin-bottom: 24pt;
+    font-weight: 500;
+    font-style: italic;
+  }
+  .cover-eyebrow::before {
+    content: "▸ ";
+    color: var(--brand);
+    font-style: normal;
+  }
+  .cover-title {
+    font-size: 56pt;
+    font-weight: 900;
+    color: var(--brand);
+    line-height: 1.0;
+    letter-spacing: 0pt;
+    margin-bottom: 16pt;
+    text-transform: uppercase;
+    transform: scaleY(1.05);
+    transform-origin: top left;
+    text-shadow: 0 0 10pt rgba(255, 232, 31, 0.3);
+  }
+  .cover-title-zh {
+    font-size: 28pt;
+    font-weight: 700;
+    color: #FFFFFF;
+    line-height: 1.15;
+    letter-spacing: 6pt;
+    margin-bottom: 24pt;
+  }
+  .cover-sub {
+    font-size: 12pt;
+    color: #C5C9D2;
+    line-height: 1.55;
+    max-width: 88%;
+    margin-bottom: 30pt;
+    font-style: italic;
+    letter-spacing: 0.5pt;
+  }
+  .cover-meta {
+    font-size: 9.5pt;
+    color: #9CA0A8;
+    line-height: 1.7;
+    border-top: 0.5pt solid #2c3a52;
+    padding-top: 14pt;
+  }
+  .cover-meta strong {
+    color: var(--brand);
+    font-weight: 500;
+    letter-spacing: 1pt;
+  }
+
+  /* ========== TOC ========== */
+  .toc { break-after: page; padding-top: 10mm; }
+  .toc h2 {
+    font-size: 22pt;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 6pt;
+    letter-spacing: 1pt;
+    text-transform: uppercase;
+  }
+  .toc h2::after {
+    content: "";
+    display: block;
+    width: 60pt;
+    height: 3pt;
+    background: var(--brand);
+    margin-top: 8pt;
+    margin-bottom: 18pt;
+  }
+  .toc-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8pt 0;
+    border-bottom: 0.4pt solid var(--border-soft);
+    font-size: 10.5pt;
+  }
+  .toc-num {
+    color: var(--brand-dark);
+    font-weight: 700;
+    min-width: 38pt;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5pt;
+  }
+  .toc-title {
+    flex: 1;
+    color: var(--text-1);
+    padding-left: 10pt;
+  }
+  .toc-page {
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ========== EPISODE 章节扉页（深空底 + 黄字罗马数字）========== */
+  .episode {
+    page: episode;
+    break-before: page;
+    break-after: page;
+    min-height: 240mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    margin: -22mm -22mm 0 -22mm;
+    padding: 22mm;
+    background: radial-gradient(ellipse at center, var(--starfield-2) 0%, var(--starfield) 70%, #050a14 100%);
+    color: #FFFFFF;
+  }
+  .episode-label {
+    font-size: 11pt;
+    color: var(--jedi);
+    letter-spacing: 6pt;
+    text-transform: uppercase;
+    margin-bottom: 14pt;
+    font-style: italic;
+  }
+  .episode-num {
+    font-size: 80pt;
+    font-weight: 900;
+    color: var(--brand);
+    line-height: 1.0;
+    margin-bottom: 18pt;
+    letter-spacing: 4pt;
+    text-shadow: 0 0 15pt rgba(255, 232, 31, 0.4);
+  }
+  .episode-title {
+    font-size: 26pt;
+    font-weight: 700;
+    color: #FFFFFF;
+    line-height: 1.2;
+    letter-spacing: 4pt;
+    text-transform: uppercase;
+    max-width: 80%;
+  }
+  .episode-sub {
+    font-size: 12pt;
+    color: #C5C9D2;
+    margin-top: 18pt;
+    font-style: italic;
+    max-width: 70%;
+    line-height: 1.55;
+  }
+
+  /* ========== HEADINGS（正文页）========== */
+  h1 {
+    font-size: 22pt;
+    font-weight: 800;
+    line-height: 1.2;
+    margin: 0 0 14pt 0;
+    color: var(--text-1);
+    letter-spacing: 0.5pt;
+    break-after: avoid;
+    text-transform: uppercase;
+  }
+  h1::before {
+    content: "";
+    display: inline-block;
+    width: 6pt;
+    height: 22pt;
+    background: var(--brand);
+    margin-right: 10pt;
+    vertical-align: -3pt;
+  }
+
+  h2 {
+    font-size: 14pt;
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 26pt 0 8pt 0;
+    color: var(--text-1);
+    break-after: avoid;
+    letter-spacing: 0.3pt;
+  }
+
+  h3 {
+    font-size: 11.5pt;
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 18pt 0 6pt 0;
+    color: var(--text-2);
+    break-after: avoid;
+  }
+
+  h4 {
+    font-size: 10.5pt;
+    font-weight: 700;
+    line-height: 1.4;
+    margin: 14pt 0 4pt 0;
+    color: var(--text-2);
+    break-after: avoid;
+  }
+
+  .chapter-num {
+    font-size: 9pt;
+    color: var(--brand-dark);
+    letter-spacing: 2pt;
+    text-transform: uppercase;
+    margin-bottom: 10pt;
+    font-weight: 700;
+    font-style: italic;
+  }
+  .chapter-num::before {
+    content: "≪ ";
+    color: var(--brand);
+    font-style: normal;
+  }
+  .chapter-num::after {
+    content: " ≫";
+    color: var(--brand);
+    font-style: normal;
+  }
+
+  /* ========== PARAGRAPHS ========== */
+  p {
+    margin: 0 0 11pt 0;
+    line-height: 1.7;
+    color: var(--text-1);
+  }
+
+  /* Lead 段落 = 开场字幕风格（italic + 字距加大）*/
+  .lead, p.crawl, .crawl p {
+    font-size: 12pt;
+    line-height: 1.7;
+    color: var(--text-2);
+    margin-bottom: 16pt;
+    font-style: italic;
+    letter-spacing: 0.5pt;
+  }
+
+  strong { font-weight: 700; color: var(--text-1); }
+  em { color: var(--brand-dark); font-style: italic; }
+  a { color: var(--brand-dark); text-decoration: none; border-bottom: 0.5pt dotted var(--brand-dark); }
+  .hl { color: var(--brand-dark); font-weight: 700; background: var(--brand-bg); padding: 0 3pt; border-radius: 2pt; }
+
+  /* ========== LISTS ========== */
+  ul, ol {
+    margin: 8pt 0 12pt 0;
+    padding-left: 22pt;
+    line-height: 1.7;
+  }
+  ul li::marker { color: var(--brand-dark); }
+  ol li::marker { color: var(--brand-dark); font-weight: 700; }
+  li { margin-bottom: 4pt; }
+
+  /* ========== BLOCKQUOTE ========== */
+  blockquote, .quote {
+    border-left: 3pt solid var(--brand);
+    margin: 14pt 0;
+    padding: 12pt 14pt 12pt 18pt;
+    color: var(--text-2);
+    line-height: 1.7;
+    background: var(--brand-bg);
+    border-radius: 0 2pt 2pt 0;
+    break-inside: avoid;
+    font-style: italic;
+  }
+  blockquote p, .quote p { margin: 0 0 8pt 0; color: var(--text-2); }
+  blockquote p:last-child, .quote p:last-child { margin-bottom: 0; }
+  blockquote .cite, .quote .cite {
+    display: block;
+    font-size: 9pt;
+    color: var(--text-3);
+    margin-top: 6pt;
+    font-style: normal;
+  }
+  blockquote .cite::before { content: "— "; }
+
+  /* ========== CODE ========== */
+  code {
+    font-family: "SF Mono", "JetBrains Mono", Consolas, monospace;
+    font-size: 9pt;
+    background: var(--paper-alt);
+    padding: 1pt 5pt;
+    border-radius: 2pt;
+    color: var(--text-2);
+    border: 0.3pt solid var(--border-soft);
+  }
+  pre {
+    font-family: "SF Mono", "JetBrains Mono", Consolas, monospace;
+    font-size: 8.5pt;
+    line-height: 1.55;
+    background: var(--starfield);
+    color: #FFFCF2;
+    border: 1pt solid var(--brand-dark);
+    border-radius: 4pt;
+    padding: 12pt 14pt;
+    margin: 12pt 0;
+    white-space: pre-wrap;
+    break-inside: avoid;
+  }
+  pre code { background: transparent; padding: 0; border: none; font-size: inherit; color: inherit; }
+
+  /* ========== TABLE ========== */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin: 14pt 0;
+    break-inside: avoid;
+    line-height: 1.55;
+    table-layout: auto;
+  }
+  table th {
+    text-align: left;
+    font-weight: 700;
+    color: var(--text-1);
+    padding: 7pt 9pt;
+    border-bottom: 2pt solid var(--brand);
+    background: var(--paper-alt);
+    font-size: 8.5pt;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+  }
+  table td {
+    padding: 6pt 9pt;
+    border-bottom: 0.4pt solid var(--border-soft);
+    vertical-align: top;
+    color: var(--text-1);
+    word-break: normal;
+    line-break: strict;
+    text-align: justify;
+    text-justify: inter-ideograph;
+  }
+  table td.nowrap { white-space: nowrap; }
+  table tr:last-child td { border-bottom: 0; }
+  table tr { break-inside: avoid; }
+
+  /* ========== CALLOUT ========== */
+  .callout {
+    background: var(--paper-alt);
+    border: 0.5pt solid var(--border);
+    border-left: 3pt solid var(--brand);
+    padding: 12pt 16pt;
+    border-radius: 0 3pt 3pt 0;
+    margin: 14pt 0;
+    line-height: 1.7;
+    break-inside: avoid;
+  }
+  .callout-label {
+    font-size: 8pt;
+    color: var(--brand-dark);
+    letter-spacing: 1.5pt;
+    text-transform: uppercase;
+    margin-bottom: 6pt;
+    font-weight: 700;
+  }
+  .callout p { margin-bottom: 8pt; color: var(--text-2); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ========== TAKEAWAY ========== */
+  .takeaway {
+    background: var(--starfield);
+    color: #FFFCF2;
+    border: 1pt solid var(--brand);
+    border-radius: 4pt;
+    padding: 14pt 18pt;
+    margin: 14pt 0;
+    break-inside: avoid;
+  }
+  .takeaway-label {
+    font-size: 8pt;
+    color: var(--brand);
+    letter-spacing: 2pt;
+    text-transform: uppercase;
+    margin-bottom: 6pt;
+    font-weight: 700;
+  }
+  .takeaway p { color: #ECE8DA; }
+  .takeaway strong { color: var(--brand); }
+
+  /* ========== TAGS（光剑色语义胶囊）========== */
+  .tag {
+    display: inline-block;
+    font-size: 8pt;
+    font-weight: 700;
+    padding: 1pt 8pt;
+    border-radius: 2pt;
+    line-height: 1.4;
+    letter-spacing: 0.5pt;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  /* 4 类语义状态用光剑色 */
+  .tag-primary  { background: rgba(59, 91, 219, 0.15); color: var(--jedi); border: 0.5pt solid var(--jedi); }
+  .tag-secondary{ background: rgba(92, 148, 13, 0.15); color: var(--yoda); border: 0.5pt solid var(--yoda); }
+  .tag-warning  { background: rgba(201, 42, 42, 0.15); color: var(--sith); border: 0.5pt solid var(--sith); }
+  .tag-walkback { background: rgba(95, 61, 196, 0.15); color: var(--windu); border: 0.5pt solid var(--windu); }
+  .tag:not([class*="tag-"]) { background: var(--brand-bg); color: var(--brand-dark); }
+
+  /* ========== nbr ========== */
+  .nbr { white-space: nowrap; }
+
+  /* ========== FIGURE ========== */
+  figure { margin: 14pt 0; break-inside: avoid; }
+  figure img { max-width: 100%; border-radius: 4pt; border: 1pt solid var(--brand); }
+  figcaption {
+    font-size: 9pt;
+    color: var(--text-3);
+    margin-top: 6pt;
+    text-align: center;
+    font-style: italic;
+  }
+
+  /* ========== CHAPTER BREAK ========== */
+  .chapter { break-before: page; padding-top: 4mm; }
+</style>
+</head>
+<body>
+
+<!-- ═════════════ COVER（深空底）═════════════ -->
+<section class="cover">
+  <div class="cover-stars"></div>
+  <div>
+    <div class="cover-eyebrow">{{EYEBROW · 如 "STRATEGIC RESEARCH"}}</div>
+    <div class="cover-title">{{ENGLISH TITLE}}</div>
+    <div class="cover-title-zh">{{中文标题}}</div>
+    <div class="cover-sub">{{副标题，italic 字幕风格}}</div>
+  </div>
+  <div class="cover-meta">
+    <strong>{{LABEL 1}}</strong>　{{描述}}<br>
+    <strong>{{LABEL 2}}</strong>　{{描述}}<br>
+    <strong>署名</strong>　{{作者}}　·　{{日期}}
+  </div>
+</section>
+
+<!-- ═════════════ EPISODE I 扉页 ═════════════ -->
+<section class="episode">
+  <div class="episode-label">EPISODE</div>
+  <div class="episode-num">I</div>
+  <div class="episode-title">{{第一章标题}}</div>
+  <div class="episode-sub">{{italic 副标题或开场字幕}}</div>
+</section>
+
+<!-- ═════════════ TOC ═════════════ -->
+<section class="toc">
+  <h2>Contents · 目录</h2>
+  <div class="toc-item">
+    <span class="toc-num">I</span>
+    <span class="toc-title">{{第一章}}</span>
+    <span class="toc-page">04</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">II</span>
+    <span class="toc-title">{{第二章}}</span>
+    <span class="toc-page">10</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">III</span>
+    <span class="toc-title">{{第三章}}</span>
+    <span class="toc-page">16</span>
+  </div>
+</section>
+
+<!-- ═════════════ Chapter Body 示例 ═════════════ -->
+<section class="chapter">
+  <div class="chapter-num">CHAPTER I</div>
+  <h1>{{章节标题}}</h1>
+
+  <p class="lead">
+    {{Lead 段落用 italic + 字距加大，模拟开场字幕的氛围。
+    用 <span class="hl">关键词高亮</span> 抓住读者注意力。}}
+  </p>
+
+  <p>{{正文段落，保持 sans-serif 干净可读。}}</p>
+
+  <div class="callout">
+    <div class="callout-label">关键观察</div>
+    <p>{{一段重要引用或核心观察。}}</p>
+  </div>
+
+  <h2>子标题</h2>
+  <p>状态标签（光剑色）：
+    <span class="tag tag-primary">JEDI</span> 一手 ·
+    <span class="tag tag-secondary">YODA</span> 二手 ·
+    <span class="tag tag-warning">SITH</span> 警告 ·
+    <span class="tag tag-walkback">WINDU</span> 反向回调
+  </p>
+
+  <blockquote>
+    <p>{{一段引用或人物语录}}</p>
+    <span class="cite">{{来源 / 人物}}</span>
+  </blockquote>
+
+  <div class="takeaway">
+    <div class="takeaway-label">May the Force be with you</div>
+    <p>{{深空底色的关键判断块——保留给最重要的总结。}}</p>
+  </div>
+</section>
+
+</body>
+</html>

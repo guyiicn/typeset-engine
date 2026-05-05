@@ -27,22 +27,25 @@ ROOT = Path(__file__).resolve().parent.parent
 KAMI_DIR = ROOT / "templates" / "kami"
 
 # 支持的模板类型（中英文对应的模板名约定）
-# long-doc-claude = long-doc 的 Anthropic/Claude 烧橙皮肤变体（触发词"claude 风格"）
-# long-doc-openai = long-doc 的 OpenAI 极简白底+绿强调皮肤变体（触发词"openai 风格"）
+# long-doc-claude   = long-doc 的 Anthropic/Claude 烧橙皮肤变体（触发词"claude 风格"）
+# long-doc-openai   = long-doc 的 OpenAI 极简白底+绿强调皮肤变体（触发词"openai 风格"）
+# long-doc-starwars = long-doc 的 Star Wars 戏剧化皮肤变体（深空 + 标志黄；触发词"星球大战风格"）
 DOC_TYPES = {
-    "one-pager", "long-doc", "long-doc-claude", "long-doc-openai",
+    "one-pager", "long-doc",
+    "long-doc-claude", "long-doc-openai", "long-doc-starwars",
     "letter", "portfolio", "resume",
 }
 
 # 每个 doc_type 的页数硬约束（见 design-constraints 第 5 节）
 PAGE_LIMITS = {
-    "resume":           (1, 2),    # 严格 ≤2
-    "one-pager":        (1, 1),    # 严格 = 1
-    "letter":           (1, 1),    # 严格 = 1
-    "long-doc":         (5, 9),    # 7±2 软
-    "long-doc-claude":  (5, 80),   # 长篇研究报告（管理层讨论稿场景，60-70 页常见），上限放宽
-    "long-doc-openai":  (5, 100),  # OpenAI 极简风格长文（执行概要 + 多案例 + 方向 + 附录），上限放至 100
-    "portfolio":        (4, 8),    # 6±2 软
+    "resume":             (1, 2),    # 严格 ≤2
+    "one-pager":          (1, 1),    # 严格 = 1
+    "letter":             (1, 1),    # 严格 = 1
+    "long-doc":           (5, 9),    # 7±2 软
+    "long-doc-claude":    (5, 80),   # 长篇研究报告（管理层讨论稿场景，60-70 页常见），上限放宽
+    "long-doc-openai":    (5, 100),  # OpenAI 极简风格长文（执行概要 + 多案例 + 方向 + 附录），上限放至 100
+    "long-doc-starwars":  (5, 80),   # Star Wars 戏剧化风格（封面+扉页深空底，正文米白）
+    "portfolio":          (4, 8),    # 6±2 软
 }
 
 
@@ -117,8 +120,8 @@ def render_template(
     if not template_path.exists():
         # 优雅降级：皮肤变体（-claude / -openai）的 -en.html 不存在时回退到 long-doc-en.html
         # （皮肤变体目前仅 zh，但 long-doc 的 en 模板可作为后备）
-        if lang == "en" and ("-claude" in doc_type or "-openai" in doc_type):
-            for suffix in ("-claude", "-openai"):
+        if lang == "en" and any(s in doc_type for s in ("-claude", "-openai", "-starwars")):
+            for suffix in ("-claude", "-openai", "-starwars"):
                 if doc_type.endswith(suffix):
                     base = doc_type.rsplit(suffix, 1)[0]
                     fallback = KAMI_DIR / f"{base}-en.html"
