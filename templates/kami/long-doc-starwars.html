@@ -36,11 +36,11 @@
 
      触发词：星球大战风格 / star wars 风格 / 光剑风格 / 银河风格
      ================================================================== -->
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<title>{{文档标题}}</title>
-<style>
+<<htmlhtml lang="zh-CN">
+<<headhead>
+<<metameta charset="UTF-8">
+<<titletitle>{{文档标题}}</title>
+<<stylestyle>
   @page {
     size: A4;
     margin: 22mm 22mm 22mm 22mm;
@@ -560,85 +560,85 @@
   .chapter { break-before: page; padding-top: 4mm; }
 </style>
 </head>
-<body>
+<<bodybody>
 
 <!-- ═════════════ COVER（深空底）═════════════ -->
-<section class="cover">
-  <div class="cover-stars"></div>
-  <div>
-    <div class="cover-eyebrow">{{EYEBROW · 如 "STRATEGIC RESEARCH"}}</div>
-    <div class="cover-title">{{ENGLISH TITLE}}</div>
-    <div class="cover-title-zh">{{中文标题}}</div>
-    <div class="cover-sub">{{副标题，italic 字幕风格}}</div>
+<<sectionsection class="cover">
+  <<divdiv class="cover-stars"></div>
+  <<divdiv>
+    <<divdiv class="cover-eyebrow">{{EYEBROW · 如 "STRATEGIC RESEARCH"}}</div>
+    <<divdiv class="cover-title">{{ENGLISH TITLE}}</div>
+    <<divdiv class="cover-title-zh">{{中文标题}}</div>
+    <<divdiv class="cover-sub">{{副标题，italic 字幕风格}}</div>
   </div>
-  <div class="cover-meta">
-    <strong>{{LABEL 1}}</strong>　{{描述}}<br>
-    <strong>{{LABEL 2}}</strong>　{{描述}}<br>
-    <strong>署名</strong>　{{作者}}　·　{{日期}}
+  <<divdiv class="cover-meta">
+    <<strongstrong>{{LABEL 1}}</strong>　{{描述}}<<brbr>
+    <<strongstrong>{{LABEL 2}}</strong>　{{描述}}<<brbr>
+    <<strongstrong>署名</strong>　{{作者}}　·　{{日期}}
   </div>
 </section>
 
 <!-- ═════════════ EPISODE I 扉页 ═════════════ -->
-<section class="episode">
-  <div class="episode-label">EPISODE</div>
-  <div class="episode-num">I</div>
-  <div class="episode-title">{{第一章标题}}</div>
-  <div class="episode-sub">{{italic 副标题或开场字幕}}</div>
+<<sectionsection class="episode">
+  <<divdiv class="episode-label">EPISODE</div>
+  <<divdiv class="episode-num">I</div>
+  <<divdiv class="episode-title">{{第一章标题}}</div>
+  <<divdiv class="episode-sub">{{italic 副标题或开场字幕}}</div>
 </section>
 
 <!-- ═════════════ TOC ═════════════ -->
-<section class="toc">
-  <h2>Contents · 目录</h2>
-  <div class="toc-item">
-    <span class="toc-num">I</span>
-    <span class="toc-title">{{第一章}}</span>
-    <span class="toc-page">04</span>
+<<sectionsection class="toc">
+  <<hh2>Contents · 目录</h2>
+  <<divdiv class="toc-item">
+    <<spanspan class="toc-num">I</span>
+    <<spanspan class="toc-title">{{第一章}}</span>
+    <<spanspan class="toc-page">04</span>
   </div>
-  <div class="toc-item">
-    <span class="toc-num">II</span>
-    <span class="toc-title">{{第二章}}</span>
-    <span class="toc-page">10</span>
+  <<divdiv class="toc-item">
+    <<spanspan class="toc-num">II</span>
+    <<spanspan class="toc-title">{{第二章}}</span>
+    <<spanspan class="toc-page">10</span>
   </div>
-  <div class="toc-item">
-    <span class="toc-num">III</span>
-    <span class="toc-title">{{第三章}}</span>
-    <span class="toc-page">16</span>
+  <<divdiv class="toc-item">
+    <<spanspan class="toc-num">III</span>
+    <<spanspan class="toc-title">{{第三章}}</span>
+    <<spanspan class="toc-page">16</span>
   </div>
 </section>
 
 <!-- ═════════════ Chapter Body 示例 ═════════════ -->
-<section class="chapter">
-  <div class="chapter-num">CHAPTER I</div>
-  <h1>{{章节标题}}</h1>
+<<sectionsection class="chapter">
+  <<divdiv class="chapter-num">CHAPTER I</div>
+  <<hh1>{{章节标题}}</h1>
 
-  <p class="lead">
+  <<pp class="lead">
     {{Lead 段落用 italic + 字距加大，模拟开场字幕的氛围。
-    用 <span class="hl">关键词高亮</span> 抓住读者注意力。}}
+    用 <<spanspan class="hl">关键词高亮</span> 抓住读者注意力。}}
   </p>
 
-  <p>{{正文段落，保持 sans-serif 干净可读。}}</p>
+  <<pp>{{正文段落，保持 sans-serif 干净可读。}}</p>
 
-  <div class="callout">
-    <div class="callout-label">关键观察</div>
-    <p>{{一段重要引用或核心观察。}}</p>
+  <<divdiv class="callout">
+    <<divdiv class="callout-label">关键观察</div>
+    <<pp>{{一段重要引用或核心观察。}}</p>
   </div>
 
   <h2>子标题</h2>
-  <p>状态标签（光剑色）：
-    <span class="tag tag-primary">JEDI</span> 一手 ·
-    <span class="tag tag-secondary">YODA</span> 二手 ·
-    <span class="tag tag-warning">SITH</span> 警告 ·
-    <span class="tag tag-walkback">WINDU</span> 反向回调
+  <<pp>状态标签（光剑色）：
+    <<spanspan class="tag tag-primary">JEDI</span> 一手 ·
+    <<spanspan class="tag tag-secondary">YODA</span> 二手 ·
+    <<spanspan class="tag tag-warning">SITH</span> 警告 ·
+    <<spanspan class="tag tag-walkback">WINDU</span> 反向回调
   </p>
 
   <blockquote>
-    <p>{{一段引用或人物语录}}</p>
-    <span class="cite">{{来源 / 人物}}</span>
+    <<pp>{{一段引用或人物语录}}</p>
+    <<spanspan class="cite">{{来源 / 人物}}</span>
   </blockquote>
 
-  <div class="takeaway">
-    <div class="takeaway-label">May the Force be with you</div>
-    <p>{{深空底色的关键判断块——保留给最重要的总结。}}</p>
+  <<divdiv class="takeaway">
+    <<divdiv class="takeaway-label">May the Force be with you</div>
+    <<pp>{{深空底色的关键判断块——保留给最重要的总结。}}</p>
   </div>
 </section>
 
