@@ -4,6 +4,8 @@
 
 Docker 容器化，HTTP API（端口 9090），15 种 PDF 主题 + 20 种 PPTX slide layout。
 
+> **非 Docker 部署**：Debian/Ubuntu x86_64 机器请用 [`deploy/native`](https://github.com/guyiicn/typeset-engine/tree/deploy/native) 分支 + [`native-v1.0`](https://github.com/guyiicn/typeset-engine/releases/tag/native-v1.0) release。详见 [deploy/native/README.md](https://github.com/guyiicn/typeset-engine/blob/deploy/native/deploy/native/README.md)。
+
 ---
 
 ## 快速开始
