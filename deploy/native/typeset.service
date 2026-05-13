@@ -1,0 +1,36 @@
+[Unit]
+Description=typeset-engine HTTP rendering API (native deploy)
+Documentation=https://github.com/guyiicn/typeset-engine/tree/deploy/native
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=typeset
+Group=typeset
+
+WorkingDirectory=/opt/typeset-native/app
+Environment=PYTHONPATH=/opt/typeset-native/app
+
+EnvironmentFile=/etc/typeset/typeset.env
+
+ExecStart=/opt/typeset-native/.venv/bin/python /opt/typeset-native/app/scripts/server.py
+
+Restart=on-failure
+RestartSec=5s
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=typeset
+
+# 安全加固
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/typeset
+
+[Install]
+WantedBy=multi-user.target
