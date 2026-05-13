@@ -1,0 +1,110 @@
+name: native-deploy CI
+
+# Lints the non-Docker deploy assets on every push / PR.
+# No package installation or local run — fast static checks only.
+
+on:
+  push:
+    branches: [deploy/native]
+    paths:
+      - 'deploy/native/**'
+      - '.github/workflows/native-deploy-ci.yml'
+  pull_request:
+    branches: [deploy/native]
+    paths:
+      - 'deploy/native/**'
+      - '.github/workflows/native-deploy-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Static checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── install.sh ────────────────────────────────────
+      - name: shellcheck install.sh
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: deploy/native
+          severity: warning
+          # SC1091: don't follow non-constant source paths
+          # SC2086: word-splitting is intentional for PIP_PROXY_ARGS
+          ignore_paths: ''
+
+      - name: bash -n syntax check
+        run: bash -n deploy/native/install.sh
+
+      # ── requirements.txt ──────────────────────────────
+      - name: Validate requirements.txt is parseable
+        run: |
+          python3 -c "
+          from packaging.requirements import Requirement
+          import re, sys
+          ok = True
+          for ln, raw in enumerate(open('deploy/native/requirements.txt'), 1):
+              s = raw.split('#', 1)[0].strip()
+              if not s:
+                  continue
+              try:
+                  Requirement(s)
+              except Exception as e:
+                  print(f'line {ln}: {raw.rstrip()} — {e}')
+                  ok = False
+          sys.exit(0 if ok else 1)
+          "
+
+      # ── env.example ───────────────────────────────────
+      - name: Validate env.example is KEY=VALUE
+        run: |
+          python3 -c "
+          import re, sys
+          ok = True
+          for ln, raw in enumerate(open('deploy/native/env.example'), 1):
+              s = raw.split('#', 1)[0].strip()
+              if not s:
+                  continue
+              if not re.match(r'^[A-Z_][A-Z0-9_]*=', s):
+                  print(f'line {ln}: malformed — {raw.rstrip()}')
+                  ok = False
+          sys.exit(0 if ok else 1)
+          "
+
+      # ── typeset.service ──────────────────────────────
+      - name: Validate systemd unit syntax
+        run: |
+          sudo cp deploy/native/typeset.service /etc/systemd/system/typeset.service
+          # systemd-analyze verify will warn about non-existent paths;
+          # we filter to only fail on actual syntax errors
+          OUTPUT=$(sudo systemd-analyze verify /etc/systemd/system/typeset.service 2>&1 || true)
+          echo "$OUTPUT"
+          # Fail on parse errors only — ignore missing-binary/missing-user warnings
+          if echo "$OUTPUT" | grep -iE 'unknown lvalue|invalid|syntax|failed to parse'; then
+            exit 1
+          fi
+
+      # ── presence ──────────────────────────────────────
+      - name: Required files present
+        run: |
+          set -e
+          for f in install.sh requirements.txt env.example typeset.service README.md; do
+            test -f "deploy/native/$f" || { echo "missing deploy/native/$f"; exit 1; }
+          done
+          test -x deploy/native/install.sh || { echo "install.sh not executable"; exit 1; }
+          echo "All required files present."
+
+      # ── README link integrity ─────────────────────────
+      - name: Check README references exist
+        run: |
+          set -e
+          # README mentions these files; confirm they exist
+          grep -q 'install.sh' deploy/native/README.md
+          grep -q 'requirements.txt' deploy/native/README.md
+          grep -q 'env.example' deploy/native/README.md
+          grep -q 'typeset.service' deploy/native/README.md
+          echo "README references all 4 deploy files."
