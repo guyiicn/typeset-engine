@@ -41,6 +41,22 @@ curl -X POST http://localhost:9091/render/diagram \
 
 ---
 
+## Claude Code skill
+
+仓库内置 `.claude/skills/typeset/`，把下面这些 curl 调用封装成 Claude Code 可加载的 skill：6 步流程（health 检查 → 选输出类型 → 选风格 → JSON 构造 → POST 渲染 → 选交付方式）。
+
+启用（一次性 symlink 到用户 skills 目录）：
+
+```bash
+ln -s "$(pwd)/.claude/skills/typeset" ~/.claude/skills/typeset
+```
+
+之后在 Claude Code 里直接说「用 typeset 出一份 cicc 风格的投研报告」，skill 会自动 `docker run` 容器、构造 JSON、POST 调用、最后还能转交 [`telegram-sendfile`](https://github.com/guyiicn/telegram-sendfile-skills) skill 推送到 TG。
+
+详见 `.claude/skills/typeset/SKILL.md` 与 `references/`。
+
+---
+
 ## HTTP API 端点
 
 | 端点 | 方法 | 输入 | 输出 | API Key |
