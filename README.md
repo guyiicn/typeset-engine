@@ -2,11 +2,24 @@
 
 统一文档渲染引擎 v3。输入 JSON，输出 PDF / DOCX / PPTX / 图表 / 技术图 / AI幻灯片 / AI配图。
 
-Docker 容器化，HTTP API（端口 9090），15 种 PDF 主题 + 20 种 PPTX slide layout。
+HTTP API（端口 9090），15 种 PDF 主题 + 20 种 PPTX slide layout。
 
 ---
 
-## 快速开始
+## 🚨 分支状态（2026-05-18 起）
+
+| 分支 | 角色 | 备注 |
+|---|---|---|
+| **`deploy/native`** | ✅ **主分支 / canonical**（GitHub default） | 包含所有最新代码 + native (systemd) 部署方案 + docker-compose bind-mount 过渡方案 |
+| `master` | 🗄️ **frozen archive**，新工作不要往这边推 | 历史 docker 路线；未来合并/删除 |
+
+**推荐部署路线**：`deploy/native/install.sh`（systemd, 无 docker）—— 见 [`deploy/native/README.md`](deploy/native/README.md)。
+
+**过渡期 docker 路线**（本机当前在跑）：仓库根的 [`docker-compose.yaml`](docker-compose.yaml) 走 bind-mount，host 改代码后 `docker compose restart` 即生效。等任一台 target 机器把 native 跑稳后，docker 路线（Dockerfile / .dockerignore / docker-compose.yaml）将一并移除。
+
+---
+
+## 快速开始（docker 过渡方案，未来移除）
 
 ```bash
 # 启动
