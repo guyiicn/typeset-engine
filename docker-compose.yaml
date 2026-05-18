@@ -1,0 +1,48 @@
+# Docker deployment for typeset-engine.
+#
+# 设计目标：把 image 当 "binary runtime + base assets + Python venv"，
+# 把会经常改的 `scripts/` 和 `templates/` 用 bind mount 从 host repo 注入，
+# 这样改 host 代码后只需 `docker compose restart typeset-engine` 就生效，
+# 无需重新 build image。
+#
+# 注意：bind mount 是只读 (:ro)，container 不能改 host 代码（防误写）。
+# 输出文件还是落 /tmp/typeset-output（rw 给 container 写）。
+#
+# 启动：
+#   cd /home/guyii/clawd/code/typeset-engine
+#   docker compose up -d
+#
+# 改 host 代码后重启：
+#   docker compose restart typeset-engine
+#
+# 看日志：
+#   docker compose logs -f typeset-engine
+
+services:
+  typeset-engine:
+    image: typeset-engine:v4
+    container_name: typeset-engine
+    restart: unless-stopped
+    ports:
+      - "9091:9090"
+    env_file:
+      - ~/.env           # 取 GEMINI_API_KEY（不写进 compose，不 commit 进 git）
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONPATH=/app
+    volumes:
+      # bind mount：host 代码覆盖 image baked-in，改 host 后 restart 立即生效
+      - ./scripts:/app/scripts:ro
+      - ./templates:/app/templates:ro
+      - ./styles:/app/styles:ro
+      - ./references:/app/references:ro
+      # 输出目录（保留现有 path）
+      - /tmp/typeset-output:/app/output:rw
+    command: ["python", "scripts/server.py"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
