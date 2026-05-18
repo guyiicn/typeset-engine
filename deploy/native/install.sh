@@ -66,13 +66,30 @@ EOF
 fi
 
 apt-get update
+
+# Ubuntu 24.04+ "t64 transition" (64-bit time_t)：libasound2 / libatk-bridge2.0-0
+# / libcups2 等被 t64 后缀版本取代。自动选当前 apt 真正能装的名字，老系统
+# (22.04/Debian 12) 走原名，24.04+ 走 t64 变体。
+pick_pkg() {
+    for cand in "$@"; do
+        if apt-cache show "$cand" >/dev/null 2>&1; then
+            echo "$cand"
+            return 0
+        fi
+    done
+    echo "$1"  # fallback：让 apt-get 自己报错
+}
+LIBASOUND=$(pick_pkg libasound2t64 libasound2)
+LIBATK_BRIDGE=$(pick_pkg libatk-bridge2.0-0t64 libatk-bridge2.0-0)
+LIBCUPS=$(pick_pkg libcups2t64 libcups2)
+
 apt-get install -y --no-install-recommends \
     "$PYTHON_BIN" "${PYTHON_BIN}-venv" "${PYTHON_BIN}-dev" \
     curl xz-utils ca-certificates rsync \
     poppler-utils imagemagick diffutils librsvg2-bin ffmpeg \
-    libnss3 libatk-bridge2.0-0 libcups2 libxcomposite1 libxdamage1 \
+    libnss3 "$LIBATK_BRIDGE" "$LIBCUPS" libxcomposite1 libxdamage1 \
     libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 \
-    libcairo2 libasound2 libxshmfence1 \
+    libcairo2 "$LIBASOUND" libxshmfence1 \
     fonts-noto-cjk fonts-arphic-ukai fonts-arphic-uming \
     fonts-cwtex-fs fonts-cwtex-heib fonts-cwtex-kai fonts-cwtex-ming \
     fonts-liberation
