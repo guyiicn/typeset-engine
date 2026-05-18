@@ -118,7 +118,16 @@ class TypesetHandler(BaseHTTPRequestHandler):
             self._send_json({
                 'commands': {
                     'pdf': {'method': 'POST', 'path': '/render/pdf', 'themes': ['cicc', 'ms', 'cms', 'dachen']},
+                    'pdf-md': {'method': 'POST', 'path': '/render/pdf-md',
+                               'description': 'Markdown → typeset JSON → PDF (Typst-safe escape applied)',
+                               'body': {'markdown': 'required str', 'title': 'required str',
+                                        'theme': 'optional, default cicc',
+                                        'author': 'optional', 'date': 'optional', 'toc': 'optional bool'}},
                     'docx': {'method': 'POST', 'path': '/render/docx', 'themes': ['cicc', 'ms', 'cms', 'dachen']},
+                    'docx-md': {'method': 'POST', 'path': '/render/docx-md',
+                                'description': 'Markdown → typeset JSON → DOCX',
+                                'body': {'markdown': 'required str', 'title': 'required str',
+                                         'theme': 'optional, default cicc'}},
                     'pptx': {'method': 'POST', 'path': '/render/pptx'},
                     'pptx-ai': {'method': 'POST', 'path': '/render/pptx-ai', 'requires': 'GEMINI_API_KEY'},
                     'chart': {'method': 'POST', 'path': '/render/chart',
@@ -173,8 +182,12 @@ class TypesetHandler(BaseHTTPRequestHandler):
         try:
             if path == '/render/pdf':
                 self._handle_pdf(data, params)
+            elif path == '/render/pdf-md':
+                self._handle_pdf_md(data, params)
             elif path == '/render/docx':
                 self._handle_docx(data, params)
+            elif path == '/render/docx-md':
+                self._handle_docx_md(data, params)
             elif path == '/render/pptx':
                 self._handle_pptx(data, params)
             elif path == '/render/pptx-ai':
@@ -214,6 +227,25 @@ class TypesetHandler(BaseHTTPRequestHandler):
         self._send_file(out_path, 'application/pdf')
         os.unlink(out_path)
 
+    def _handle_pdf_md(self, data, params):
+        """Markdown body → typeset JSON → PDF. Same options as /render/pdf otherwise."""
+        from md_to_typeset import convert
+        from render_pdf import render_pdf
+
+        markdown = data.pop('markdown', None)
+        if not markdown:
+            self._send_error(400, 'Missing "markdown" field in request body')
+            return
+        title = data.pop('title', 'Untitled')
+        theme = data.pop('theme', None) or self._get_param(params, 'theme', 'cicc')
+
+        payload = convert(markdown, title, **data)
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False, dir=OUTPUT_DIR) as f:
+            out_path = f.name
+        render_pdf(payload, out_path, theme=theme)
+        self._send_file(out_path, 'application/pdf')
+        os.unlink(out_path)
+
     def _handle_docx(self, data, params):
         from render_docx import render_docx
         theme = data.pop('theme', None) or self._get_param(params, 'theme', 'cicc')
@@ -222,6 +254,26 @@ class TypesetHandler(BaseHTTPRequestHandler):
             out_path = f.name
 
         render_docx(data, out_path, theme=theme)
+        self._send_file(out_path,
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        os.unlink(out_path)
+
+    def _handle_docx_md(self, data, params):
+        """Markdown body → typeset JSON → DOCX. Same options as /render/docx otherwise."""
+        from md_to_typeset import convert
+        from render_docx import render_docx
+
+        markdown = data.pop('markdown', None)
+        if not markdown:
+            self._send_error(400, 'Missing "markdown" field in request body')
+            return
+        title = data.pop('title', 'Untitled')
+        theme = data.pop('theme', None) or self._get_param(params, 'theme', 'cicc')
+
+        payload = convert(markdown, title, **data)
+        with tempfile.NamedTemporaryFile(suffix='.docx', delete=False, dir=OUTPUT_DIR) as f:
+            out_path = f.name
+        render_docx(payload, out_path, theme=theme)
         self._send_file(out_path,
                         'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
         os.unlink(out_path)
