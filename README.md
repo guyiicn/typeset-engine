@@ -1,10 +1,26 @@
 # typeset-engine
 
+> # 🗄️ THIS BRANCH IS FROZEN ARCHIVE
+>
+> **从 2026-05-18 起，主分支已切换为 [`deploy/native`](https://github.com/guyiicn/typeset-engine/tree/deploy/native)**（GitHub default branch）。
+>
+> - `master` 分支仅作为历史 docker 路线的存档保留，**不接受新 commit**
+> - 所有最新代码 + 部署方案 + 文档都在 `deploy/native`
+> - 包括：新 long-doc skin variants (claude/openai/starwars)、founders-playbook 模板、docker-compose bind-mount 过渡方案、deploy/native systemd 安装脚本
+>
+> ```bash
+> # 新 clone
+> git clone https://github.com/guyiicn/typeset-engine.git  # default = deploy/native
+>
+> # 已有 clone 切到主分支
+> git remote set-head origin -a && git checkout deploy/native && git pull
+> ```
+
+---
+
 统一文档渲染引擎 v3。输入 JSON，输出 PDF / DOCX / PPTX / 图表 / 技术图 / AI幻灯片 / AI配图。
 
 Docker 容器化，HTTP API（端口 9090），15 种 PDF 主题 + 20 种 PPTX slide layout。
-
-> **非 Docker 部署**：Debian/Ubuntu x86_64 机器请用 [`deploy/native`](https://github.com/guyiicn/typeset-engine/tree/deploy/native) 分支 + [`native-v1.0`](https://github.com/guyiicn/typeset-engine/releases/tag/native-v1.0) release。详见 [deploy/native/README.md](https://github.com/guyiicn/typeset-engine/blob/deploy/native/deploy/native/README.md)。
 
 ---
 
