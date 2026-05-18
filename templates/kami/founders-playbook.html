@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!-- ==================================================================
+     FOUNDERS PLAYBOOK TEMPLATE · ANTHROPIC STYLE
+     创始人指南模板
+     横版 8.5×11 英寸，珊瑚红封面，7 色章节扉页循环
+     ================================================================== -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>{{title}}</title>
+<style>
+  @page {
+    size: 8.5in 11in;
+    margin: 0;
+  }
+  @page:first { @bottom-center { content: ""; } }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  .page {
+    page-break-after: always;
+    position: relative;
+    width: 792pt;
+    min-height: 612pt;
+    overflow: visible;
+  }
+  body { background: #fff; }
+
+  /* Colors */
+  :root {
+    --coral: #D36F53; --teal: #5F9B89; --purple: #8C77D1;
+    --mint: #BBD1C9; --lavender: #CAC9DB; --peach: #EFD4C6; --warm-gray: #AFADA4;
+  }
+
+  /* Fonts */
+  .serif { font-family: 'Source Han Serif CN', 'Noto Serif CJK SC', Georgia, serif; }
+  .sans { font-family: 'Noto Sans CJK SC', 'PingFang SC', sans-serif; }
+</style>
+</head>
+<body>
+{{BODY}}
+</body>
+</html>

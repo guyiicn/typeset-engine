@@ -34,6 +34,7 @@ DOC_TYPES = {
     "one-pager", "long-doc",
     "long-doc-claude", "long-doc-openai", "long-doc-starwars",
     "letter", "portfolio", "resume",
+    "founders-playbook",  # 创始人指南
 }
 
 # 每个 doc_type 的页数硬约束（见 design-constraints 第 5 节）
@@ -46,7 +47,155 @@ PAGE_LIMITS = {
     "long-doc-openai":    (5, 100),  # OpenAI 极简风格长文（执行概要 + 多案例 + 方向 + 附录），上限放至 100
     "long-doc-starwars":  (5, 80),   # Star Wars 戏剧化风格（封面+扉页深空底，正文米白）
     "portfolio":          (4, 8),    # 6±2 软
+    "founders-playbook":  (10, 40),  # 创始人指南（封面+目录+N 章节）
 }
+
+# ── founders-playbook 数据驱动渲染 ─────────────────────────────────────
+
+# 章节扉页 7 色循环
+FPB_COLORS = [
+    '#D36F53',  # coral
+    '#5F9B89',  # teal
+    '#8C77D1',  # purple
+    '#BBD1C9',  # mint
+    '#CAC9DB',  # lavender
+    '#EFD4C6',  # peach
+    '#AFADA4',  # warm gray
+]
+
+# 扉页 SVG Logo（Claude 太阳花）
+_LOGO_SVG = (
+    '<svg style="position:absolute;left:54pt;top:528pt;width:40pt;height:40pt;" viewBox="0 0 40 40">'
+    '<circle cx="20" cy="20" r="3" fill="#141413"/>'
+    '<g fill="#141413">'
+    '<ellipse cx="20" cy="5" rx="4" ry="12" transform="rotate(0 20 20)"/>'
+    '<polygon points="20,0 22,10 18,10" transform="rotate(30 20 20)"/>'
+    '<ellipse cx="20" cy="5" rx="4" ry="12" transform="rotate(60 20 20)"/>'
+    '<polygon points="20,0 22,10 18,10" transform="rotate(90 20 20)"/>'
+    '<ellipse cx="20" cy="5" rx="4" ry="12" transform="rotate(120 20 20)"/>'
+    '<polygon points="20,0 22,10 18,10" transform="rotate(150 20 20)"/>'
+    '<ellipse cx="20" cy="5" rx="4" ry="12" transform="rotate(180 20 20)"/>'
+    '<polygon points="20,0 22,10 18,10" transform="rotate(210 20 20)"/>'
+    '<ellipse cx="20" cy="5" rx="4" ry="12" transform="rotate(240 20 20)"/>'
+    '<polygon points="20,0 22,10 18,10" transform="rotate(270 20 20)"/>'
+    '<ellipse cx="20" cy="5" rx="4" ry="12" transform="rotate(300 20 20)"/>'
+    '<polygon points="20,0 22,10 18,10" transform="rotate(330 20 20)"/>'
+    '</g></svg>'
+)
+
+
+def _build_fpb_html(slots: dict) -> str:
+    """根据 slots 数据生成 founders-playbook 完整 HTML body 内容。
+
+    Args:
+        slots: {
+            "title": str,
+            "subtitle": str,
+            "mode": "full" | "minimal" | "plain" (默认 "full"),
+            "chapters": [
+                {"number": int, "title": str, "mode": ..., "body": "<p>...</p>"},
+                ...
+            ],
+        }
+
+    Returns:
+        完整 HTML body 内容（不含 <body> 标签，由外部包裹）
+    """
+    global_mode = slots.get("mode", "full")
+    title = slots.get("title", "")
+    subtitle = slots.get("subtitle", "")
+    chapters = slots.get("chapters", [])
+
+    parts: list[str] = []
+
+    # 封面
+    parts.append(
+        f'<div class="page" style="position:relative;width:792pt;height:612pt;background:#D36F53;">'
+        f'<div class="serif" style="position:absolute;left:54pt;top:110pt;font-size:56pt;color:#141413;line-height:62pt;">{title}</div>'
+        f'<div class="serif" style="position:absolute;left:54pt;top:172pt;font-size:56pt;color:#141413;line-height:62pt;">{subtitle}</div>'
+        f'{_LOGO_SVG}'
+        f'<svg style="position:absolute;left:94pt;top:531pt;width:113pt;height:26pt;" viewBox="0 0 113 26">'
+        f'<text x="0" y="20" font-family="Georgia,serif" font-size="22pt" fill="#141413">Claude</text>'
+        f'</svg></div>'
+    )
+
+    # 目录
+    toc_items = []
+    for ch in chapters:
+        toc_items.append(
+            f'<tr><td style="padding:4pt 0;">{ch["title"]}</td>'
+            f'<td style="text-align:right;padding:4pt 0;width:40pt;">{ch.get("number", "?")}</td></tr>'
+        )
+    parts.append(
+        f'<div class="page" style="position:relative;width:792pt;height:612pt;background:#fff;">'
+        f'<div class="serif" style="position:absolute;left:54pt;top:84pt;font-size:30pt;color:#0b0b0b;">Contents</div>'
+        f'<table style="position:absolute;left:54pt;top:138pt;width:684pt;font-family:Noto Sans CJK SC,sans-serif;font-size:12pt;color:#0b0b0b;">'
+        f'{"".join(toc_items)}'
+        f'</table>'
+        f'<div class="sans" style="position:absolute;right:60pt;bottom:30pt;font-size:7pt;color:#231f20;">2</div>'
+        f'</div>'
+    )
+
+    # 章节
+    for i, ch in enumerate(chapters):
+        mode = ch.get("mode", global_mode)
+        number = ch.get("number", i + 1)
+        ch_title = ch.get("title", "")
+        ch_body = ch.get("body", "")
+        color = FPB_COLORS[i % 7]
+
+        if mode == "full":
+            # 扉页
+            parts.append(
+                f'<div class="page" style="position:relative;width:792pt;height:612pt;background:{color};">'
+                f'<rect x="0" y="0" width="792" height="612" fill="{color}"/>'
+                f'<rect x="54.25" y="418.6" width="68" height="19.15" rx="9.5" stroke="#141413" stroke-width="1.5" fill="none"/>'
+                f'<div class="sans" style="position:absolute;left:63pt;top:484pt;font-size:11pt;color:#0b0b0b;">Chapter {number}</div>'
+                f'<div class="serif" style="position:absolute;left:54pt;top:506pt;font-size:48pt;color:#0b0b0b;line-height:52pt;">{ch_title}</div>'
+                f'<div class="sans" style="position:absolute;right:60pt;bottom:30pt;font-size:7pt;color:#231f20;">{3 + i * 2}</div>'
+                f'</div>'
+            )
+            # 正文
+            parts.append(
+                f'<div class="page" style="position:relative;width:792pt;height:612pt;background:#fff;">'
+                f'<div class="serif" style="position:absolute;left:54pt;top:118pt;font-size:30pt;color:#0b0b0b;">{ch_title}</div>'
+                f'<div class="serif" style="position:absolute;left:54pt;top:160pt;width:354pt;font-size:9pt;color:#0b0b0b;line-height:12.9pt;">'
+                f'{ch_body}'
+                f'</div></div>'
+            )
+        elif mode == "minimal":
+            # 只有标题页（白色背景，无彩色）
+            parts.append(
+                f'<div class="page" style="position:relative;width:792pt;height:612pt;background:#fff;">'
+                f'<div class="serif" style="position:absolute;left:54pt;top:200pt;font-size:48pt;color:#0b0b0b;line-height:52pt;">{ch_title}</div>'
+                f'<div class="sans" style="position:absolute;left:63pt;top:484pt;font-size:11pt;color:#0b0b0b;">Chapter {number}</div>'
+                f'</div>'
+            )
+            parts.append(
+                f'<div class="page" style="position:relative;width:792pt;height:612pt;background:#fff;">'
+                f'<div class="serif" style="position:absolute;left:54pt;top:118pt;font-size:30pt;color:#0b0b0b;">{ch_title}</div>'
+                f'<div class="serif" style="position:absolute;left:54pt;top:160pt;width:354pt;font-size:9pt;color:#0b0b0b;line-height:12.9pt;">'
+                f'{ch_body}'
+                f'</div></div>'
+            )
+        elif mode == "plain":
+            # 只有正文
+            parts.append(
+                f'<div class="page" style="position:relative;width:792pt;height:612pt;background:#fff;">'
+                f'<div class="serif" style="position:absolute;left:54pt;top:50pt;font-size:30pt;color:#0b0b0b;">{ch_title}</div>'
+                f'<div class="serif" style="position:absolute;left:54pt;top:100pt;width:354pt;font-size:9pt;color:#0b0b0b;line-height:12.9pt;">'
+                f'{ch_body}'
+                f'</div></div>'
+            )
+
+    # 封底
+    parts.append(
+        '<div class="page" style="position:relative;width:792pt;height:612pt;background:#D36F53;">'
+        '<div class="sans" style="position:absolute;right:110pt;bottom:55pt;font-size:13pt;color:#fff;">claude.ai</div>'
+        '</div>'
+    )
+
+    return '\n'.join(parts)
 
 
 def _lazy_import():
@@ -137,6 +286,25 @@ def render_template(
             raise FileNotFoundError(f"模板不存在: {template_path}")
 
     html = template_path.read_text(encoding="utf-8")
+
+    # ── founders-playbook: 数据驱动渲染 ──────────────────────────────
+    # 这个模板不是简单的 {{key}} 替换，而是用 Python 生成完整 body HTML
+    if doc_type == "founders-playbook":
+        if slots is None:
+            slots = {}
+        body_html = _build_fpb_html(slots)
+        # 把生成的 body 注入模板骨架
+        html = _replace_body(html, body_html)
+        effective_base = base_url if base_url is not None else str(KAMI_DIR)
+        result = render_html(html, base_url=effective_base, out_path=out_path)
+        result["doc_type"] = doc_type
+        result["language"] = lang
+        result["template"] = template_name
+        limit = PAGE_LIMITS.get(doc_type)
+        if limit:
+            lo, hi = limit
+            result["page_limit"] = [lo, hi]
+        return result
 
     # 两个填充阶段相互独立、可叠加：
     # 1. slots 先替换模板里的 {{文档标题}} 等占位符（@page 页脚 / <title> 等模板自带 slot）
