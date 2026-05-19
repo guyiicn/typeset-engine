@@ -16,7 +16,7 @@ set -euo pipefail
 
 HOST="${1:-sg2}"
 REMOTE_PATH="${2:-/root/typeset-engine}"
-BRANCH="${BRANCH:-deploy/native}"
+BRANCH="${BRANCH:-master}"   # 2026-05-19 起 master 成为 canonical, 原 deploy/native 已删
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"

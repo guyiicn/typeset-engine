@@ -36,7 +36,9 @@
 ### 1. 克隆分支
 
 ```bash
-git clone -b deploy/native --depth 1 https://github.com/guyiicn/typeset-engine.git
+git clone https://github.com/guyiicn/typeset-engine.git
+# (master 是 canonical native 分支, 2026-05-19 起取代原 deploy/native;
+#  历史 docker 代码在 legacy-docker 分支)
 cd typeset-engine/deploy/native
 ```
 
