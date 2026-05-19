@@ -17,7 +17,10 @@ PPTX 渲染引擎 — 支持多种投行/券商风格模板。
   "author":   "FinRobot",
   "date":     "2026-04-07",
   "slides": [
-    # 每个 slide 按 layout 取不同顶层字段 (见 render_pptx() dispatch):
+    # 每个 slide 按 layout 取不同顶层字段 (见 render_pptx() dispatch).
+    # 完整字段对应 tests/test_render_pptx_layouts.py 验证过的 schema.
+
+    # ── 通用 12 种 ─────────────────────────────────────────────────
     {"layout": "title",      "title": "...", "subtitle": "..."},
     {"layout": "section",    "title": "...", "subtitle": "..."},
     {"layout": "content",    "title": "...", "content": "...",
@@ -34,8 +37,45 @@ PPTX 渲染引擎 — 支持多种投行/券商风格模板。
     {"layout": "chart",      "title": "...", "image": "/path/to/chart.png", "caption": "..."},
     {"layout": "kpi",        "title": "...",
                              "kpis":   [{"label":"营收","value":"100亿","change":"+15%"}]},
-    {"layout": "comparison", "title": "...", ...},
-    {"layout": "summary",    "title": "...", "bullets": ["要点1", "要点2"]}  # 或 "points"
+    {"layout": "comparison", "title": "...",
+                             "left_title":  "PROS", "left_items":  ["fast", "cheap"],
+                             "right_title": "CONS", "right_items": ["risky"]},
+    {"layout": "timeline",   "title": "...",
+                             "events": [{"date": "2024 Q1", "event": "launch"}]},
+    {"layout": "quote",      "quote":  "...", "author": "Knuth", "source": "CACM 1974"},
+    {"layout": "end",        "title": "Thank You", "subtitle": "Q&A",
+                             "contact": "hi@example.com"},
+    {"layout": "summary",    "title": "...", "bullets": ["要点1", "要点2"]},  # 或 "points"
+
+    # ── 投行 Pitch Book 专用 8 种 ──────────────────────────────────
+    {"layout": "comparable_companies", "title": "Comps",
+                             "headers": [...], "rows": [...], "source": "Bloomberg"},
+    {"layout": "football_field",  "title": "Valuation",
+                             "ranges": [{"method":"DCF","low":80,"high":120}],
+                             "current_price": 95, "currency": "$", "source": "..."},
+    {"layout": "sources_uses",    "title": "S&U",
+                             "sources": [{"item":"Debt","amount":500}],
+                             "uses":    [{"item":"Purchase","amount":700}],
+                             "currency": "$m", "source": "..."},
+    {"layout": "sensitivity_matrix", "title": "Sensitivity",
+                             "row_label": "g", "col_label": "WACC",
+                             "row_values": ["2%","3%"], "col_values": ["8%","9%"],
+                             "matrix": [[100,95],[110,105]],
+                             "highlight_row": 1, "highlight_col": 1, "source": "..."},
+    {"layout": "transaction_overview", "title": "TX Summary",
+                             "key_points": [...],  # 或 "bullets"
+                             "terms": [{"label":"Price","value":"$1.2B"}], "source": "..."},
+    {"layout": "disclaimer",  "title": "Disclosures",
+                             "content": "..."},  # 或 "text"
+    {"layout": "waterfall",   "title": "EBITDA Bridge",
+                             "items": [{"label":"FY24","value":100,"type":"total"},
+                                       {"label":"Growth","value":20,"type":"positive"},
+                                       {"label":"FY25","value":120,"type":"total"}],
+                             "currency": "$m", "source": "..."},
+    {"layout": "org_chart",   "title": "Org",
+                             "root": {"name":"CEO","title":"Jane",
+                                      "children":[{"name":"CTO","title":"John","children":[]}]},
+                             "source": "..."},
   ]
 }
 """
