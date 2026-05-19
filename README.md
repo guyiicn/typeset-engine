@@ -32,10 +32,12 @@ docker stop typeset-engine              # 观察 1-3 天没问题再 docker rm
 |---|---|
 | **`master`** | ✅ **canonical**（GitHub default）— native 部署，所有 fix / 新特性都到这边 |
 | `legacy-docker` | 🗄️ **frozen archive** — 老 master force push 前的备份，包含 `Dockerfile` / `docker-compose.yaml` 历史。仅用于查阅，不再有新 commit |
-| `deploy/native` | （历史分支别名）— 指向跟 master 相同 HEAD；下个里程碑删 |
 
-部署详见：[`deploy/native/README.md`](deploy/native/README.md)（路径暂时保留，
-内容是 native 安装步骤；后续会迁到 `deploy/` 顶层）
+> 📌 `deploy/native` 分支已删除（2026-05-19）— 它指向跟 master 相同 HEAD，已合并完毕。
+> 老 clone 用 `git checkout master && git pull` 切回主线。目录 `deploy/native/` 仍保留
+> （安装脚本和 systemd unit 在那里，跟分支名是巧合同名）。
+
+部署详见：[`deploy/native/README.md`](deploy/native/README.md)（native 安装步骤）
 
 ---
 

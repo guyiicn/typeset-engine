@@ -2,8 +2,9 @@
 
 统一文档渲染引擎 — 输入 JSON，输出 PDF / DOCX / PPTX / PNG / SVG / ZIP。
 
-> ℹ️ Docker 路线已在 transition (commit `97cfb58`)，**新接入请走 native 部署**
-> (`deploy/native` 分支)。本指南只覆盖 HTTP API，不再描述 docker CLI 用法。
+> ℹ️ Docker 路线已归档到 `legacy-docker` 分支（2026-05-19）。`master` 现在直接走
+> native 部署（systemd + .venv）。本指南只覆盖 HTTP API，不再描述 docker CLI 用法。
+> 老 docker 用户的升级指引见 [`docs/MIGRATION-docker-to-native.md`](docs/MIGRATION-docker-to-native.md)。
 
 ---
 
@@ -12,8 +13,7 @@
 | 节点 | URL | 备注 |
 |---|---|---|
 | sg2 公网 | `http://sg2.guyii.net:9090` | 验收通过，待加 nginx 反代 |
-| 本机 docker (过渡) | `http://localhost:9091` | bind-mount 本地 `deploy/native` 代码 |
-| 本机 native (规划) | `http://localhost:9092` | TBD |
+| 本机 native | `http://localhost:9091` | systemd / nohup, venv `/home/guyii/clawd/code/typeset-engine/.venv` |
 
 约定：
 

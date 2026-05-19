@@ -27,9 +27,11 @@ metadata:
 
 HTTP API（默认端口 9091）生成专业文档。一个 curl 调用 = 一份完整文档。
 
-> 部署形态：deploy/native 分支是 canonical（systemd 直管 .venv python），
-> docker 路线在 transition。本机和 sg2 均已切到 native，端口 9091 不变，
-> 调用方对部署形态无感。详见 `deploy/native/README.md`。
+> 部署形态：master 分支 = native (systemd 直管 .venv python)，2026-05-19 已正式
+> 升为 canonical（取代原 docker 路线）。docker 时代代码归档到 `legacy-docker` 分支。
+> 本机和 sg2 都切到 native，端口 9091 不变，调用方无感。详见
+> `deploy/native/README.md`（路径保留）+ `docs/MIGRATION-docker-to-native.md`
+> （老 docker 用户升级路径）。
 
 ## 触发词
 
@@ -104,7 +106,7 @@ curl -s http://localhost:9091/health
 如果失败，按部署形态恢复：
 
 ```bash
-# 形态 A: native (本机和 sg2 默认, deploy/native 分支)
+# 形态 A: native (本机和 sg2 默认, master 分支 = canonical)
 ss -tlnp | grep :9091   # 看进程是否还在
 # 进程死了 → 重启:
 cd /home/guyii/clawd/code/typeset-engine && \
