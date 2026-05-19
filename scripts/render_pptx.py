@@ -12,20 +12,30 @@ PPTX 渲染引擎 — 支持多种投行/券商风格模板。
 
 数据格式 (JSON):
 {
-  "title": "贵州茅台 研究报告",
+  "title":    "贵州茅台 研究报告",     # 自动封面 (cover) 标题
   "subtitle": "600519 | 白酒/消费",
-  "author": "FinRobot",
-  "date": "2026-04-07",
+  "author":   "FinRobot",
+  "date":     "2026-04-07",
   "slides": [
-    {
-      "layout": "title",          # title / section / content / two_column / chart / table / summary
-      "title": "公司概况",
-      "content": "正文内容...",
-      "bullets": ["要点1", "要点2"],
-      "image": "/path/to/chart.png",
-      "table": {"headers": [...], "rows": [...]},
-      "notes": "演讲者备注"
-    }
+    # 每个 slide 按 layout 取不同顶层字段 (见 render_pptx() dispatch):
+    {"layout": "title",      "title": "...", "subtitle": "..."},
+    {"layout": "section",    "title": "...", "subtitle": "..."},
+    {"layout": "content",    "title": "...", "content": "...",
+                             "bullets": ["要点1", "要点2"],
+                             "image": "/path/to/chart.png",
+                             "notes": "演讲者备注"},
+    {"layout": "two_column", "title": "...",
+                             "left_content":  "左栏文本",
+                             "right_content": "右栏文本",
+                             "image": "/path/to/right.png"},  # 可选, 替代右栏文本
+    {"layout": "table",      "title": "...",
+                             "headers": ["列1", "列2"],
+                             "rows":    [["a","b"], ["c","d"]]},  # headers/rows 直接放顶层
+    {"layout": "chart",      "title": "...", "image": "/path/to/chart.png", "caption": "..."},
+    {"layout": "kpi",        "title": "...",
+                             "kpis":   [{"label":"营收","value":"100亿","change":"+15%"}]},
+    {"layout": "comparison", "title": "...", ...},
+    {"layout": "summary",    "title": "...", "bullets": ["要点1", "要点2"]}  # 或 "points"
   ]
 }
 """
