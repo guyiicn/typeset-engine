@@ -353,12 +353,18 @@ def _replace_body(html: str, new_body: str) -> str:
     return result
 
 
-_SLOT_RE = re.compile(r"\{\{\s*([a-zA-Z_][a-zA-Z0-9_.-]*)\s*\}\}")
+# \w 在 Python3 默认 Unicode-aware，匹配中文 (CJK) / 拉丁 / 数字 / 下划线
+# 老正则 r"[a-zA-Z_][a-zA-Z0-9_.-]*" 只接 ASCII key, 模板里的 {{文档标题}}
+# 等中文 key 永远不会被替换 → CSS 里的 {{文档标题}} 字面值会被 WeasyPrint
+# 渲染成 @bottom-left 页脚的字面字符串. 改用 \w 支持中文 key.
+# 用 +? 非贪婪 + 排除空白避免误匹配模板示例如 {{EYEBROW · 如 STRATEGIC}}.
+_SLOT_RE = re.compile(r"\{\{\s*([\w.-]+?)\s*\}\}")
 
 
 def _apply_slots(html: str, slots: dict[str, Any]) -> str:
     """简单 {{key}} 字符串替换，**不做 HTML 转义**——slot 值由 agent 负责预转义。
-    缺失 key 保留 {{key}} 原样（方便 debug）。"""
+    缺失 key 保留 {{key}} 原样（方便 debug）。
+    Key 支持中文 (\\w 是 Unicode-aware)，例如 {{文档标题}} 可被替换。"""
     def repl(m: re.Match) -> str:
         key = m.group(1)
         if key in slots:
