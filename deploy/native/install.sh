@@ -205,9 +205,43 @@ if [[ ! -f "$ENV_FILE" ]]; then
     sed -i "s|^OUTPUT_DIR=.*|OUTPUT_DIR=$OUTPUT_DIR|" "$ENV_FILE"
     chmod 640 "$ENV_FILE"
     chown root:"$SERVICE_USER" "$ENV_FILE"
-    warn "已生成 $ENV_FILE — 请填入 GEMINI_API_KEY 和代理变量"
+
+    # ── 自动发现并注入 GEMINI_API_KEY ──────────────────────
+    # 优先级: install 时传入的 env var > $SUDO_USER 的 ~/.env > 无 (留 warn)
+    _gemini_key=""
+    _gemini_src=""
+    if [[ -n "${GEMINI_API_KEY:-}" ]]; then
+        _gemini_key="$GEMINI_API_KEY"
+        _gemini_src="env var"
+    elif [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]]; then
+        _user_home=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+        if [[ -n "$_user_home" && -f "$_user_home/.env" ]]; then
+            _gemini_key=$(grep -E '^GEMINI_API_KEY=' "$_user_home/.env" \
+                          | head -1 | cut -d= -f2- \
+                          | sed -e 's/^["'\'']//' -e 's/["'\'']$//')
+            [[ -n "$_gemini_key" ]] && _gemini_src="$_user_home/.env"
+        fi
+    fi
+
+    if [[ -n "$_gemini_key" ]]; then
+        # key 字符仅含 [A-Za-z0-9_-]，| 作分隔符安全
+        sed -i "s|^GEMINI_API_KEY=.*|GEMINI_API_KEY=$_gemini_key|" "$ENV_FILE"
+        ok "已自动注入 GEMINI_API_KEY (来源: $_gemini_src)"
+        warn "前提: 该 key 所属 GCP 项目需 enable billing — free tier 对 image 模型配额为 0"
+    else
+        warn "未检测到 GEMINI_API_KEY — 请手动编辑 $ENV_FILE 填入"
+    fi
+
+    # ── 把 install 时的代理变量持久化到 env ─────────────────
+    # (install.sh 上面已 export HTTPS_PROXY/HTTP_PROXY/NO_PROXY；这里只是落盘)
+    if [[ -n "$HTTPS_PROXY" ]]; then
+        sed -i "s|^HTTPS_PROXY=.*|HTTPS_PROXY=$HTTPS_PROXY|" "$ENV_FILE"
+        sed -i "s|^HTTP_PROXY=.*|HTTP_PROXY=${HTTP_PROXY:-$HTTPS_PROXY}|" "$ENV_FILE"
+        [[ -n "${NO_PROXY:-}" ]] && sed -i "s|^NO_PROXY=.*|NO_PROXY=$NO_PROXY|" "$ENV_FILE"
+        ok "已注入 HTTPS_PROXY / HTTP_PROXY / NO_PROXY"
+    fi
 else
-    warn "$ENV_FILE 已存在, 未覆盖"
+    warn "$ENV_FILE 已存在, 未覆盖 (如需重置: rm $ENV_FILE 后重跑 install.sh)"
 fi
 
 SERVICE_FILE=/etc/systemd/system/typeset.service
@@ -232,7 +266,9 @@ cat <<EOF
 
 ═══════════════════════════════════════════════════════════
 后续步骤:
-  1. 编辑 $ENV_FILE 填入 GEMINI_API_KEY 和代理
+  1. 检查 $ENV_FILE (GEMINI_API_KEY/代理是否已自动注入)
+     非交互预填: GEMINI_API_KEY=AIza... sudo -E bash install.sh
+     或在 \$SUDO_USER 的 ~/.env 里放 GEMINI_API_KEY=...
   2. systemctl enable --now typeset
   3. curl http://localhost:\${PORT:-9090}/health
 

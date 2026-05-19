@@ -69,15 +69,29 @@ sudo -E bash install.sh
 
 ### 4. 填 secrets
 
+install.sh 会**自动注入** `GEMINI_API_KEY` 和代理（按下面优先级），通常无需手动编辑：
+
+| 来源 | 优先级 | 使用方法 |
+|------|--------|---------|
+| `GEMINI_API_KEY` 环境变量 | 高 | `sudo -E GEMINI_API_KEY=AIza... bash install.sh` |
+| `$SUDO_USER` 家目录的 `~/.env` | 中 | 普通用户 home 里放 `GEMINI_API_KEY=AIza...`，然后 `sudo -E bash install.sh` |
+| 代理 `HTTPS_PROXY`/`HTTP_PROXY` | — | install 时已 export 的代理会被持久化到 env 文件 |
+
+> ⚠️ **GEMINI_API_KEY 必须来自 billing-enabled GCP 项目** — Google 对图像生成模型
+> (`gemini-2.5-flash-image`) free tier 配额为 0，free key 调 `/render/illustrate`
+> 会得到 `429 RESOURCE_EXHAUSTED`。
+
+仍需手动编辑的场景：
+
 ```bash
 sudo $EDITOR /etc/typeset/typeset.env
 ```
 
-至少填:
-```
-GEMINI_API_KEY=AIza...    # AI PPT / AI 配图需要
-HTTPS_PROXY=http://...    # Gemini API 走代理
-HTTP_PROXY=http://...
+env 文件已存在时 install.sh **不会覆盖**（保持幂等）。如需重置:
+
+```bash
+sudo rm /etc/typeset/typeset.env
+sudo -E GEMINI_API_KEY=AIza... bash install.sh   # 重跑会重新生成 + 注入
 ```
 
 ### 5. 启动服务

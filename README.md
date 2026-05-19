@@ -48,7 +48,12 @@ curl -X POST http://localhost:9091/render/diagram \
   -d '{"svg":"<svg>...</svg>","width":1920}' -o diagram.png
 ```
 
-> GEMINI_API_KEY 仅 pptx-ai / illustrate 需要，其他命令可不传。
+> **GEMINI_API_KEY** 仅 `pptx-ai` / `illustrate` 需要，其他命令可不传。
+>
+> ⚠️ **必须是 billing-enabled GCP 项目的 key** — Google 对图像生成模型
+> (`gemini-2.5-flash-image`) 的 free tier 配额为 0，free key 调 illustrate
+> 会得到 `429 RESOURCE_EXHAUSTED` (报错里 model 显示成 `-preview-image`
+> 是 Google 服务端配额计费名，跟代码里实际传的不同，别被迷惑)。
 
 ---
 
