@@ -74,7 +74,7 @@ curl -X POST http://localhost:9090/render/diagram \
   -o diagram.png
 ```
 
-完整 API 文档：[`USAGE.md`](USAGE.md)（14 端点 schema + 9 PDF 主题 + 20 PPTX layout +
+完整 API 文档：[`USAGE.md`](USAGE.md)（**16 端点** schema + 15 PDF 主题 + 20 PPTX layout +
 14 kami 模板 + 错误处理 + 5 条常见坑）
 
 > **GEMINI_API_KEY** 仅 `pptx-ai` / `illustrate` 需要，其他命令可不传。
@@ -86,21 +86,31 @@ curl -X POST http://localhost:9090/render/diagram \
 
 ---
 
-## HTTP API 端点
+## HTTP API 端点（16 个）
 
 | 端点 | 方法 | 输入 | 输出 | API Key |
 |------|:----:|------|------|:-------:|
-| `/render/pdf` | POST | 报告 JSON + `?theme=xxx` | PDF | 否 |
-| `/render/docx` | POST | 报告 JSON + `?theme=xxx` | DOCX | 否 |
+| `/render/pdf` | POST | 报告 JSON + `theme` | PDF | 否 |
+| `/render/pdf-md` | POST | `{markdown, title, theme?}` | PDF | 否 |
+| `/render/docx` | POST | 报告 JSON + `theme` | DOCX | 否 |
+| `/render/docx-md` | POST | `{markdown, title, theme?}` | DOCX | 否 |
 | `/render/pptx` | POST | 幻灯片 JSON | PPTX | 否 |
 | `/render/chart` | POST | 图表 JSON | PNG | 否 |
-| `/render/diagram` | POST | SVG 字符串 | PNG | 否 |
-| `/render/pptx-ai` | POST | slides_plan JSON | ZIP | 是 |
-| `/render/illustrate` | POST | 文本+风格 | PNG | 是 |
-| `/styles` | GET | — | 风格列表 | 否 |
+| `/render/diagram` | POST | SVG 字符串 | PNG/SVG | 否 |
+| `/render/kami` | POST | HTML / body_html / slots | PDF | 否 |
+| `/render/pptx-ai` | POST | slides_plan JSON | ZIP | **billing** |
+| `/render/illustrate` | POST | 文本 + 风格 | PNG | **billing** |
+| `/validate/css` | POST | `{content, filename?, only?}` | JSON | 否 |
+| `/styles` | GET | — | AI 配图风格列表 | 否 |
 | `/capabilities` | GET | — | 全部能力描述 | 否 |
-| `/health` | GET | — | 状态 | 否 |
-| `/fonts` | GET | — | 字体列表 | 否 |
+| `/health` | GET | — | liveness | 否 |
+| `/fonts` | GET | — | 系统字体列表 | 否 |
+| `/kami/templates` | GET | — | kami 14 模板矩阵 | 否 |
+| `/kami/template/{doc_type}` | GET | `?lang=zh\|en` | HTML 模板源码 | 否 |
+
+> `-md` 后缀的两个端点是 markdown shortcut（commit a39794a 加）—— 直接传 markdown 字符串，
+> 服务端用 `scripts/md_to_typeset.py` 转 sections JSON 后走 `/render/pdf` 或 `/render/docx`，
+> 兼容所有 `theme`。适合调用方已经有 markdown 内容时省去构造 sections JSON 的麻烦。
 
 ---
 
@@ -178,6 +188,50 @@ curl -X POST http://localhost:9090/render/diagram \
 ### PPTX 主题（6 种）
 
 `default` / `cicc` / `goldman` / `morgan` / `dark` / `minimal`
+
+---
+
+## Kami HTML 模板（14 种）
+
+`/render/kami` 端点用 WeasyPrint 把 HTML 渲染成 PDF，模板放在 `templates/kami/`。
+
+### 标准模板（5 类型 × zh/en = 10 个）
+
+| 模板 | 中文 / 英文 | 页数约束 | 适用 |
+|------|:---:|:---:|------|
+| `one-pager` | ✓ / ✓ | 1 | 一页纸总结 / 招股说明摘要 |
+| `letter` | ✓ / ✓ | 1 | 正式商务信件 |
+| `resume` | ✓ / ✓ | 1-2 | 个人简历 |
+| `portfolio` | ✓ / ✓ | 4-8 | 作品集 / 个人介绍 |
+| `long-doc` | ✓ / ✓ | 5-9 | 商务长文 / 战略推演（深蓝 #1B365D 强调）|
+
+### 长文变体（仅 zh, 4 个）
+
+| 模板 | 强调色 / 风格 | 页数约束 | 适用 |
+|------|------|:---:|------|
+| `long-doc-claude` | **烧橙 #d97757 + 鼠尾草绿 #788c5d** | 5-80 | Anthropic Claude 风格管理稿 |
+| `long-doc-openai` | OpenAI 黑白调 | 5-100 | OpenAI 风格大体量长报告 |
+| `long-doc-starwars` | Star Wars 黄 #FFE81F + 深空蓝 + EPISODE 罗马数字章节扉页 | 5-80 | 内部 / 创意 only（非外发客户）|
+| `founders-playbook` | 7 色循环扉页（Coral/Teal/Purple/Mint/Lavender/Peach/Warm Gray）+ Claude 太阳花 logo | 10-40 | 创始人指南 / 数据驱动长文 |
+
+> `founders-playbook` 是**数据驱动模式**（不走模板替换）：必须传 `slots = {title, subtitle, chapters: [{number, title, mode, body}]}`，
+> 每个 chapter `mode` 取 `full`/`minimal`/`plain` 控制扉页类型。详见 `scripts/render_kami.py:_build_fpb_html`。
+
+### 3 种调用模式
+
+```bash
+# 模式 1: 整 HTML 自己拼 (最灵活)
+curl -X POST http://localhost:9091/render/kami -H 'Content-Type: application/json' \
+  -d '{"html": "<!DOCTYPE html><html>...</html>"}' -o output.pdf
+
+# 模式 2: 模板 + body_html 替换 (保留模板 CSS, 换 body)
+curl -X POST http://localhost:9091/render/kami -H 'Content-Type: application/json' \
+  -d '{"doc_type":"resume","language":"en","body_html":"<h1>Name</h1>..."}' -o resume.pdf
+
+# 模式 3: 模板 + slots 替换 ({{key}} 占位符替换, 支持中文 key)
+curl -X POST http://localhost:9091/render/kami -H 'Content-Type: application/json' \
+  -d '{"doc_type":"one-pager","language":"zh","slots":{"文档标题":"...","作者":"..."}}' -o brief.pdf
+```
 
 ---
 
@@ -293,18 +347,28 @@ SVG 模板：`references/diagram-templates/*.svg`（10 种图类型）
 
 ## 字体
 
-Docker 镜像内置以下字体：
+native 部署用宿主机系统字体（`fc-list` 看到的）。install.sh 不另装字体；公文模板专用的方正字体打包在仓库 `fonts/` 目录。
+
+### 仓库自带（公文专用，install.sh 会注册到 fontconfig）
 
 | 字体 | 用途 |
 |------|------|
 | 方正小标宋 (FZXiaoBiaoSong-B05) | 公文红头/标题 |
-| SimHei 黑体 | 公文一级标题 |
-| FangSong 仿宋 | 公文正文 |
-| 方正仿宋 (FZFangSong-Z02) | 公文正文备选 |
-| Noto Sans/Serif CJK SC | 通用中文 |
-| AR PL UKai CN | 楷体 |
-| cwTeX 系列 | 仿宋/黑体/楷体/明体 |
-| Liberation Serif/Sans/Mono | Times/Arial/Courier 替代 |
+| SimHei 黑体 (SIMHEI.TTF) | 公文一级标题 |
+| FangSong 仿宋 (SIMFANG.TTF) | 公文正文 |
+| 方正仿宋 (FZFangSong-Z02 / FZFS_GBK) | 公文正文备选 |
+
+### 系统应有（apt 装 `fonts-noto-cjk fonts-noto-cjk-extra`）
+
+| 字体 | 用途 |
+|------|------|
+| Noto Sans / Serif CJK SC | 通用中文（fallback 链首选）|
+| Source Han Serif SC | kami / founders-playbook 中文正文 |
+| Liberation Serif / Sans / Mono | Times / Arial / Courier 通用替代 |
+| AnthropicSerif / AnthropicSans | kami `long-doc-claude` 英文（变量字体）|
+
+> 系统没装中文字体会让中文文本 fallback 出乱码 / 方框。装：
+> `sudo apt install fonts-noto-cjk fonts-noto-cjk-extra`
 
 ---
 
@@ -320,41 +384,70 @@ Docker 镜像内置以下字体：
 
 ```
 typeset-engine/
-├── Dockerfile                        # Docker 构建文件
 ├── README.md                         # 本文件
-├── USAGE.md                          # CLI 详细用法
-├── DOCS_INPUT_FORMAT.md              # DOCX 格式规范
+├── USAGE.md                          # HTTP API 详细用法
+├── DOCS_INPUT_FORMAT.md              # DOCX JSON 格式规范
+│
+├── deploy/native/                    # 部署 (canonical 路径)
+│   ├── install.sh                    # 一键 native 安装 (systemd + venv)
+│   ├── env.example                   # /etc/typeset/typeset.env 模板
+│   ├── typeset.service               # systemd unit
+│   ├── requirements.txt              # Python 运行时依赖
+│   ├── check-drift.sh                # 检查远端 vs 本地 commit drift
+│   └── README.md                     # 部署详细步骤
+│
+├── docs/
+│   ├── MIGRATION-docker-to-native.md # 老 docker 用户升级指引 (260 行)
+│   ├── founders-playbook.md          # founders-playbook 模板规范
+│   └── founders-playbook-plan.md     # 设计文档
 │
 ├── scripts/                          # 渲染引擎
-│   ├── server.py                     # HTTP API 服务器（端口 9090）
-│   ├── render_pdf.py                 # PDF 渲染（Typst，15 主题）
-│   ├── render_docx.py                # DOCX 渲染（python-docx）
-│   ├── render_pptx.py                # PPTX 渲染（python-pptx，20 layout）
-│   ├── render_pptx_ai.py             # AI PPT（Gemini + FFmpeg）
-│   ├── render_charts.py              # 图表渲染（Plotly，13 种）
-│   ├── render_diagram.py             # 技术图渲染（SVG → PNG，rsvg-convert）
-│   ├── render_illustrate.py          # AI 配图（Gemini）
+│   ├── server.py                     # HTTP API 服务器
+│   ├── render_pdf.py                 # PDF 渲染 (Typst, 15 主题)
+│   ├── render_docx.py                # DOCX 渲染 (python-docx)
+│   ├── render_pptx.py                # PPTX 渲染 (python-pptx, 20 layout)
+│   ├── render_pptx_ai.py             # AI PPT (Gemini + FFmpeg)
+│   ├── render_charts.py              # 图表渲染 (Plotly, 13 种)
+│   ├── render_diagram.py             # 技术图渲染 (SVG → PNG, rsvg-convert)
+│   ├── render_illustrate.py          # AI 配图 (Gemini)
+│   ├── render_kami.py                # Kami HTML→PDF (WeasyPrint, 14 模板)
+│   ├── md_to_typeset.py              # markdown → typeset JSON 转换器
+│   ├── validate_kami.py              # Kami 9 条美学约束扫描
 │   ├── validate_docx.py              # DOCX JSON 校验
 │   └── file_diff.py                  # 文件对比
 │
 ├── templates/                        # 排版模板
-│   ├── cicc-report.typ               # 投研报告 Typst 主模板
 │   ├── themes.typ                    # 15 个 PDF 主题配色定义
+│   ├── cicc-report.typ               # 投研报告 Typst 主模板
 │   ├── gongwen.typ                   # GB/T 9704 公文模板
-│   └── academic/                     # 学术论文模板
+│   ├── kami/                         # 14 个 kami HTML 模板
+│   │   ├── one-pager.html / one-pager-en.html
+│   │   ├── letter.html / letter-en.html
+│   │   ├── resume.html / resume-en.html
+│   │   ├── portfolio.html / portfolio-en.html
+│   │   ├── long-doc.html / long-doc-en.html
+│   │   ├── long-doc-claude.html      # 烧橙 Anthropic 风
+│   │   ├── long-doc-openai.html      # OpenAI 黑白调
+│   │   ├── long-doc-starwars.html    # Star Wars 视觉
+│   │   └── founders-playbook.html    # 数据驱动创始人指南
+│   └── academic/                     # 学术论文 Typst 模板
 │       ├── ieee/lib.typ              # IEEE 双栏论文
 │       ├── cn-paper/lib.typ          # 中文学术论文
 │       ├── working-paper/lib.typ     # SSRN 工作论文
-│       ├── sjtu-thesis/              # 上海交大学位论文（19 文件）
-│       ├── pku-thesis/               # 北京大学学位论文（7 文件）
-│       └── hust-thesis/              # 华中科大学位论文（25 文件）
+│       ├── sjtu-thesis/              # 上海交大学位论文 (19 文件)
+│       ├── pku-thesis/               # 北京大学学位论文 (7 文件)
+│       └── hust-thesis/              # 华中科大学位论文 (25 文件)
+│
+├── skill/                            # openclaw skill (2026-05-19 从 ~/.openclaw/skills 搬入)
+│   ├── SKILL.md                      # 上游调用 agent 的 5 步工作流
+│   └── references/                   # api-reference / design-constraints / workflow
 │
 ├── references/                       # 技术图参考资料
 │   ├── diagram/                      # 7 种风格参考 + icons + 布局规范
 │   ├── diagram-templates/            # 10 种图类型 SVG 模板
 │   └── diagram-fixtures/             # 7 种风格 JSON 示例数据
 │
-├── fonts/                            # 公文字体
+├── fonts/                            # 公文专用字体 (install.sh 注册到 fontconfig)
 │   ├── 方正小标宋GBK.TTF
 │   ├── SIMHEI.TTF
 │   ├── SIMFANG.TTF
@@ -365,23 +458,39 @@ typeset-engine/
 │   ├── vector-illustration.md
 │   └── ticket.md
 │
-└── tests/                            # 单元测试
+└── tests/                            # 单元测试 (pytest 兼容, stdlib-only)
+    ├── test_render_pptx_layouts.py   # 20 layout 全覆盖 (21/21 通过)
+    ├── test_kami_unicode_slots.py    # _apply_slots 中文 key 支持 (8/8)
+    ├── test_kami_template_sanity.py  # 模板 lint (4/4)
+    ├── test_render_kami.py           # kami 渲染端到端
+    ├── test_validate_kami.py         # 9 美学约束扫描
+    ├── test_render_docx.py
+    └── test_fpb.py                   # founders-playbook 端到端
 ```
+
+> 历史 `Dockerfile` / `docker-compose.yaml` 已归档到 `legacy-docker` 分支（2026-05-19），
+> master 分支已无 docker 文件。如需查阅 docker 时代代码 `git checkout legacy-docker`。
 
 ---
 
-## 依赖
+## 运行时依赖
 
-Docker 镜像包含：
+native 部署，`install.sh` 装：
 
-- **Typst 0.14.0** — PDF 排版引擎
-- **python-pptx** — PPTX 生成
-- **python-docx** — DOCX 生成
-- **Plotly + Kaleido + Chrome** — 图表渲染
-- **librsvg2 (rsvg-convert)** — SVG → PNG
-- **FFmpeg** — 视频合成
-- **ImageMagick** — 图片处理
-- **Google Gemini SDK** — AI 图片/PPT 生成
+| 组件 | 版本 / 用途 |
+|------|------|
+| Python | 3.10+ (推荐 system `python3.12`, **不要用 anaconda**, 见 MIGRATION 文档坑 1) |
+| **Typst** | 0.14.0 — PDF 排版引擎（install.sh 装到 `~/.local/bin/typst`）|
+| **WeasyPrint** 68.1 | Kami HTML→PDF |
+| **python-pptx** 1.0.2 | PPTX 生成 |
+| **python-docx** 1.2.0 | DOCX 生成 |
+| **Plotly** 6.7 + **Kaleido** 1.2 + **Chrome** | 图表渲染（Chrome 从仓库 `native-v1.0` release 下，148MB）|
+| **librsvg2 (rsvg-convert)** | SVG → PNG（apt 装 `librsvg2-bin`）|
+| **FFmpeg** | 视频合成（仅 `/render/pptx-ai`）|
+| **google-genai** 1.73 | Gemini API (illustrate / pptx-ai, **需 billing key**) |
+| **libpango/libcairo/libgdk-pixbuf** | WeasyPrint 系统库（apt 装）|
+
+完整 pip 清单见 [`deploy/native/requirements.txt`](deploy/native/requirements.txt)。
 
 ---
 
