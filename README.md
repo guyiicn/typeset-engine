@@ -1,52 +1,79 @@
 # typeset-engine
 
-统一文档渲染引擎 v3。输入 JSON，输出 PDF / DOCX / PPTX / 图表 / 技术图 / AI幻灯片 / AI配图。
+统一文档渲染引擎。输入 JSON，输出 PDF / DOCX / PPTX / 图表 / 技术图 / AI幻灯片 / AI配图。
 
-HTTP API（端口 9090），15 种 PDF 主题 + 20 种 PPTX slide layout。
-
----
-
-## 🚨 分支状态（2026-05-18 起）
-
-| 分支 | 角色 | 备注 |
-|---|---|---|
-| **`deploy/native`** | ✅ **主分支 / canonical**（GitHub default） | 包含所有最新代码 + native (systemd) 部署方案 + docker-compose bind-mount 过渡方案 |
-| `master` | 🗄️ **frozen archive**，新工作不要往这边推 | 历史 docker 路线；未来合并/删除 |
-
-**推荐部署路线**：`deploy/native/install.sh`（systemd, 无 docker）—— 见 [`deploy/native/README.md`](deploy/native/README.md)。
-
-**过渡期 docker 路线**（本机当前在跑）：仓库根的 [`docker-compose.yaml`](docker-compose.yaml) 走 bind-mount，host 改代码后 `docker compose restart` 即生效。等任一台 target 机器把 native 跑稳后，docker 路线（Dockerfile / .dockerignore / docker-compose.yaml）将一并移除。
+HTTP API（端口 9090），15 种 PDF 主题 + 20 种 PPTX slide layout + 14 种 kami HTML 模板。
 
 ---
 
-## 快速开始（docker 过渡方案，未来移除）
+## 🚨 已部署过 docker 版的请先读这里
+
+**2026-05-19 起 `master` 已切换为 native 部署（systemd + .venv），原 docker 路线归档到
+`legacy-docker` 分支。** 如果你之前 `docker run typeset-engine:v1`~`v4`，按下面读：
+
+→ **完整迁移指引**：[`docs/MIGRATION-docker-to-native.md`](docs/MIGRATION-docker-to-native.md)
+（含老 docker 用户怎么识别状态 / 5 分钟升级步骤 / 配置迁移表 / 端口差异 9090 vs 9091 /
+回退方案 / 删 docker 资产的命令）
+
+**TL;DR**（已部署 docker 的）：
+```bash
+git pull origin master
+sudo -E bash deploy/native/install.sh   # 自动从 ~/.env 注入 GEMINI key
+sudo systemctl enable --now typeset
+curl http://localhost:9090/health
+docker stop typeset-engine              # 观察 1-3 天没问题再 docker rm
+```
+
+---
+
+## 分支状态
+
+| 分支 | 角色 |
+|---|---|
+| **`master`** | ✅ **canonical**（GitHub default）— native 部署，所有 fix / 新特性都到这边 |
+| `legacy-docker` | 🗄️ **frozen archive** — 老 master force push 前的备份，包含 `Dockerfile` / `docker-compose.yaml` 历史。仅用于查阅，不再有新 commit |
+| `deploy/native` | （历史分支别名）— 指向跟 master 相同 HEAD；下个里程碑删 |
+
+部署详见：[`deploy/native/README.md`](deploy/native/README.md)（路径暂时保留，
+内容是 native 安装步骤；后续会迁到 `deploy/` 顶层）
+
+---
+
+## 快速开始（新装机器）
 
 ```bash
-# 启动
-docker run -d --name typeset-engine \
-  -p 9091:9090 \
-  -e GEMINI_API_KEY=你的key \
-  -v /tmp/typeset-output:/app/output \
-  typeset-engine:v3
+# 1. 装 native (5 分钟)
+git clone https://github.com/guyiicn/typeset-engine.git
+cd typeset-engine
+echo 'GEMINI_API_KEY=AIza...' >> ~/.env   # billing-enabled GCP 项目的 key
+sudo -E bash deploy/native/install.sh
+sudo systemctl enable --now typeset
 
-# 验证
-curl http://localhost:9091/health
+# 2. 验证
+curl http://localhost:9090/health
+# 期望: {"status":"ok","engine":"typeset-engine","version":"1.0"}
 
-# 生成 PDF（中金风格）
-curl -X POST http://localhost:9091/render/pdf?theme=cicc \
+# 3. 生成 PDF (中金风格)
+curl -X POST http://localhost:9090/render/pdf \
   -H "Content-Type: application/json" \
-  -d @report.json -o report.pdf
+  -d '{"theme":"cicc","title":"测试","sections":[{"type":"heading","title":"内容"}]}' \
+  -o report.pdf
 
-# 生成 PPTX（Goldman Sachs 风格）
-curl -X POST http://localhost:9091/render/pptx \
+# 4. 生成 PPTX (高盛风格)
+curl -X POST http://localhost:9090/render/pptx \
   -H "Content-Type: application/json" \
-  -d '{"theme":"goldman","title":"Report","slides":[...]}' -o deck.pptx
+  -d '{"template":"goldman","title":"Report","slides":[{"layout":"section","title":"...","subtitle":"..."}]}' \
+  -o deck.pptx
 
-# 生成技术架构图（SVG → PNG）
-curl -X POST http://localhost:9091/render/diagram \
+# 5. 生成技术架构图 (SVG → PNG)
+curl -X POST http://localhost:9090/render/diagram \
   -H "Content-Type: application/json" \
-  -d '{"svg":"<svg>...</svg>","width":1920}' -o diagram.png
+  -d '{"svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"200\">...</svg>","width":1920}' \
+  -o diagram.png
 ```
+
+完整 API 文档：[`USAGE.md`](USAGE.md)（14 端点 schema + 9 PDF 主题 + 20 PPTX layout +
+14 kami 模板 + 错误处理 + 5 条常见坑）
 
 > **GEMINI_API_KEY** 仅 `pptx-ai` / `illustrate` 需要，其他命令可不传。
 >
