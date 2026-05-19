@@ -15,8 +15,8 @@
 set -euo pipefail
 
 HOST="${1:-sg2}"
-REMOTE_PATH="${2:-/root/typeset-engine}"
-BRANCH="${BRANCH:-master}"   # 2026-05-19 起 master 成为 canonical, 原 deploy/native 已删
+REMOTE_PATH="${2:-/opt/typeset-engine}"   # 2026-05-19 起单层架构, 原 /root/typeset-engine 已废
+BRANCH="${BRANCH:-master}"                # master 成为 canonical, 原 deploy/native 已删
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
@@ -45,9 +45,10 @@ if [[ "$local_branch" != "$BRANCH" ]]; then
     echo
 fi
 
-# 远端 HEAD (容错: ssh 失败 / 仓库不存在)
+# 远端 HEAD (容错: ssh 失败 / 仓库不存在 / git safe.directory)
+# safe.directory '*' 临时绕过 ownership 检查 (sg2/us 上 repo owner=root:typeset, ssh user 可能不匹配)
 remote_info=$(ssh -o ConnectTimeout=10 -o BatchMode=yes "$HOST" \
-    "cd '$REMOTE_PATH' 2>/dev/null && git rev-parse HEAD && git rev-parse --short HEAD && git log -1 --pretty=%s HEAD" 2>&1 || true)
+    "cd '$REMOTE_PATH' 2>/dev/null && git -c safe.directory='*' rev-parse HEAD && git -c safe.directory='*' rev-parse --short HEAD && git -c safe.directory='*' log -1 --pretty=%s HEAD" 2>&1 || true)
 
 if [[ -z "$remote_info" ]] || echo "$remote_info" | grep -qE "No such|not a git|Connection|Permission"; then
     red "[x] 无法访问 $HOST:$REMOTE_PATH"
