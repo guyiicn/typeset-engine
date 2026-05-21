@@ -18,6 +18,16 @@ import tempfile
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
+# typeset-engine repo 根目录 (含 templates/ 子目录).
+# 用于 typst --root 参数, 让 typst 能解析 templates/academic/... templates/gongwen.typ 等
+# import 路径. 优先用 TYPESET_ROOT env var (调用方显式覆盖), 否则从本文件位置回推
+# (scripts/render_pdf.py 上一级 = repo 根).
+# 这替代了原 hardcode "/app" (docker 容器内 typeset-engine 挂载点) 的写法.
+TYPESET_ROOT = os.environ.get(
+    'TYPESET_ROOT',
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
+
 # 图表引擎复用
 try:
     from scripts.render_charts import render_chart, CHART_TYPES
@@ -829,14 +839,16 @@ def render_pdf(data: Dict, output: str, template: str = 'default',
         if theme in ('ieee', 'cn-paper', 'working-paper'):
             # ── 学术论文模式 ──
             typ_content = _generate_academic_typ(data, theme)
-            ac_dir = os.path.join('/app', 'output', '_academic_tmp')
+            # .typ 必须在 TYPESET_ROOT 子树内, typst --root 才能解析模板 import.
+            # 用 work_dir 不行 (在 /tmp 外), 改用 TYPESET_ROOT/output/_academic_tmp.
+            ac_dir = os.path.join(TYPESET_ROOT, 'output', '_academic_tmp')
             os.makedirs(ac_dir, exist_ok=True)
             typ_path = os.path.join(ac_dir, 'paper.typ')
             with open(typ_path, 'w', encoding='utf-8') as f:
                 f.write(typ_content)
 
             result = subprocess.run(
-                ['typst', 'compile', '--root', '/app', typ_path, output],
+                ['typst', 'compile', '--root', TYPESET_ROOT, typ_path, output],
                 capture_output=True, text=True, timeout=60,
             )
             try:
@@ -859,16 +871,16 @@ def render_pdf(data: Dict, output: str, template: str = 'default',
                 data.setdefault('redhead_size', 32)
                 data.setdefault('signature_organ', '湖南电广传媒股份有限公司')
             typ_content = _generate_gongwen_typ(data)
-            # 必须在 /app 目录树内，typst --root /app 才能解析 import
-            gw_dir = os.path.join('/app', 'output', '_gongwen_tmp')
+            # .typ 必须在 TYPESET_ROOT 子树内, typst --root 才能解析 templates/gongwen.typ
+            gw_dir = os.path.join(TYPESET_ROOT, 'output', '_gongwen_tmp')
             os.makedirs(gw_dir, exist_ok=True)
             typ_path = os.path.join(gw_dir, 'report.typ')
             with open(typ_path, 'w', encoding='utf-8') as f:
                 f.write(typ_content)
 
-            # typst compile（--root /app 以解析 /app/templates/ 路径）
+            # typst compile（--root TYPESET_ROOT 以解析 templates/ 路径）
             result = subprocess.run(
-                ['typst', 'compile', '--root', '/app', typ_path, output],
+                ['typst', 'compile', '--root', TYPESET_ROOT, typ_path, output],
                 capture_output=True, text=True, timeout=60,
             )
             # 清理临时文件
