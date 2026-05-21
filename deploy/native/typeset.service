@@ -30,7 +30,10 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/lib/typeset
+# /var/lib/typeset = OUTPUT_DIR (PDF/PPTX/PNG 输出)
+# /opt/typeset-native/output = typst input .typ 中转 (学术/公文主题用,
+#                              typst --root 限制 input 必须在 root 内, 不能直接用 OUTPUT_DIR)
+ReadWritePaths=/var/lib/typeset /opt/typeset-native/output
 
 [Install]
 WantedBy=multi-user.target

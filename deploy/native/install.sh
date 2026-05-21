@@ -256,6 +256,12 @@ sed \
 
 chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_PREFIX" "$OUTPUT_DIR"
 
+# typst input .typ 中转目录 (学术/公文主题用 TYPESET_ROOT/output, 必须可写
+# 因 typst --root 限制 input 不能在 root 之外). 单独留 770 给 typeset 组写.
+mkdir -p "$INSTALL_PREFIX/output"
+chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_PREFIX/output"
+chmod 770 "$INSTALL_PREFIX/output"
+
 systemctl daemon-reload
 
 # 清理临时 apt 代理配置
