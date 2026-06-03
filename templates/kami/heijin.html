@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<!-- ==================================================================
+     TECHNICAL READING BRIEF · 黑金风格 (BLACK-GOLD)
+     深色技术阅读简报 · 暗金强调视觉语言
+
+     设计来源：复刻一份深色"技术阅读简报" PDF 的排版语言，
+     固化为 typeset 可复用模式。触发词见文末。
+
+     ── 设计原则（制作路径核心）────────────────────────────────
+     1. 单强调色：近黑蓝底 (#0a0c10) 上只用一种暗金 (#cda85f) 做强调，
+        其余全部靠灰阶 (text / text-dim / line) 分层。点缀色（绿/橙）
+        仅用于卡片头区分语义，绝不进正文。
+     2. 字体二元：衬线承载叙述，等宽承载数据/代码/标签。
+        - 拉丁大标题 = Playfair Display（Didone 高对比，杂志感）
+        - 中文标题/正文 = Source Han Serif CN / Noto Serif CJK SC（思源宋体）
+        - 拉丁正文衬线（含斜体）= Newsreader
+        - 等宽 = JetBrains Mono + Noto Sans Mono CJK SC
+     3. 斜体即强调：关键术语/书名/引语用 <em> 衬线斜体。
+     4. 留白即节奏：节与节之间 hr.sep 呼吸；卡片内紧凑。
+     5. 所有"块"组件 break-inside:avoid，深色卡片被分页切断极丑。
+
+     ── 调色板 ──────────────────────────────────────────────
+       bg        #0a0c10  页面底（近黑带蓝）
+       card      #14171f  卡片底
+       card2     #181c26  次级卡片底 / 表头
+       line      #262b37  分隔线 / 边框
+       gold      #cda85f  主强调（暗金）
+       gold-hi   #e2bd6d  亮金（大数字）
+       teal      #5cb79a  点缀绿（卡片头）
+       coral     #d9895c  点缀橙（卡片头）
+       tx        #c4c9d2  正文灰
+       tx-hi     #eef0f4  白标题
+       tx-dim    #7f8694  弱化灰
+
+     ── 组件库（class 速查）──────────────────────────────────
+       .hero / .eyebrow / h1.title / .subtitle / .meta   封面区
+       .stats > .stat (.num/.cap)                         4 列数据卡（flex）
+       .sec (.no + h2) + hr.sep                            金色编号节标题
+       .h3 (.note)                                        金色小节标题
+       .cols > .card (.head .dot.g/.t/.c + ul.list)       双栏圆点卡片
+       .callout (.label + p)                              左金边引用块
+       table (thead/tbody, tr.hl)                          深色表 + 金色高亮行
+       .funnel > .row > .bar (.pct) + .ann                 金色递减漏斗 + 右侧标注
+       .flow > .pill(.final) + .arr                        胶囊流程图
+       .tip (.n + .h + .d)                                 大号衬线编号 tips
+       .footer (.by + .fine)                               居中页脚
+       行内：.tag(等宽标签) / <em>(斜体强调) / <b>(白色加重) / .gold
+
+     ── 渲染 ────────────────────────────────────────────────
+       引擎：WeasyPrint（HTML→PDF）。整页深色经 @page background 实现。
+       字体经 @font-face 指向 templates/kami/fonts/（base_url 解析），
+       自包含、不依赖系统注册即可渲染。
+       CLI:  python scripts/render_kami.py --template heijin --out /tmp/o.pdf
+       HTTP: POST /render/kami {"doc_type":"heijin","language":"zh"}
+
+     使用前提：技术报告/论文阅读摘要、产品规格简报、研究速记。
+     不适合：超长连续叙事正文（深色长读累眼）、需打印的客户提案。
+
+     触发词：黑金风格 / black-gold / 黑金简报 / 暗金风格 / 技术阅读简报
+     ================================================================== -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>{{文档标题}}</title>
+<style>
+  /* ===== 字体（自包含，相对 base_url = templates/kami/）===== */
+  @font-face{ font-family:"Playfair Display"; src:url("fonts/PlayfairDisplay-800.woff2") format("woff2"); font-weight:700 900; font-style:normal; font-display:swap; }
+  @font-face{ font-family:"Newsreader"; src:url("fonts/Newsreader.woff2") format("woff2"); font-weight:400 600; font-display:swap; }
+  @font-face{ font-family:"JetBrains Mono"; src:url("fonts/JetBrainsMono.woff2") format("woff2"); font-weight:400 600; font-display:swap; }
+
+  :root{
+    --bg:#0a0c10; --card:#14171f; --card2:#181c26; --line:#262b37;
+    --gold:#cda85f; --gold-hi:#e2bd6d; --teal:#5cb79a; --coral:#d9895c;
+    --tx:#c4c9d2; --tx-hi:#eef0f4; --tx-dim:#7f8694;
+    --serif:"Newsreader","Source Han Serif CN","Noto Serif CJK SC",Georgia,serif;
+    --display:"Playfair Display","Source Han Serif CN","Noto Serif CJK SC",Georgia,serif;
+    --mono:"JetBrains Mono","Noto Sans Mono CJK SC",monospace;
+  }
+
+  @page{
+    size:A4; margin:20mm 17mm; background:#0a0c10;
+    @bottom-right{ content:counter(page); font-family:"JetBrains Mono","Noto Sans Mono CJK SC",monospace;
+      font-size:8pt; color:#5a6072; }
+    @bottom-left{ content:"{{文档标题}}"; font-family:"JetBrains Mono","Noto Sans Mono CJK SC",monospace;
+      font-size:8pt; color:#5a6072; letter-spacing:.5pt; }
+  }
+  @page:first{ @bottom-right{ content:""; } @bottom-left{ content:""; } }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ background:#0a0c10; }
+  body{ color:var(--tx); font-family:var(--serif); font-size:11pt; line-height:1.8; }
+
+  .mono{ font-family:var(--mono); }
+  .gold{ color:var(--gold); } .dim{ color:var(--tx-dim); }
+  em{ color:var(--tx-hi); font-style:italic; }
+  b,strong{ color:var(--tx-hi); font-weight:600; }
+  .tag{ font-family:var(--mono); font-size:8pt; background:#20242f; color:var(--gold);
+    padding:0 5pt; border-radius:3pt; }
+  .eyebrow{ font-family:var(--mono); font-size:8.5pt; letter-spacing:.4em;
+    text-transform:uppercase; color:var(--gold); font-weight:600; }
+  .eyebrow .sub{ color:var(--tx-dim); letter-spacing:.18em; }
+
+  /* ===== HERO ===== */
+  .hero{ margin-bottom:6pt; }
+  .hero .eyebrow{ display:block; margin-bottom:10pt; }
+  h1.title{ font-family:var(--display); font-weight:800; font-size:42pt;
+    line-height:1.04; color:var(--tx-hi); margin-bottom:8pt; letter-spacing:.5pt; }
+  .subtitle{ font-size:14pt; color:var(--tx); margin-bottom:16pt; }
+  .meta{ font-family:var(--mono); font-size:9pt; color:var(--tx-dim); line-height:2.0; }
+  .meta b{ color:var(--gold); font-weight:600; }
+
+  /* ===== 数据卡（flex，分隔线用 border-left）===== */
+  .stats{ display:flex; border-top:1pt solid var(--line); border-bottom:1pt solid var(--line);
+    margin:22pt 0 6pt; break-inside:avoid; }
+  .stat{ flex:1; padding:14pt 14pt 16pt; border-left:1pt solid var(--line); }
+  .stat:first-child{ border-left:0; padding-left:2pt; }
+  .stat .num{ font-family:var(--mono); font-size:23pt; font-weight:700; color:var(--gold-hi);
+    line-height:1; margin-bottom:9pt; }
+  .stat .cap{ font-size:8.5pt; color:var(--tx-dim); line-height:1.55; }
+
+  /* ===== 节标题 ===== */
+  hr.sep{ border:0; border-top:1pt solid var(--line); margin:24pt 0; }
+  .sec{ margin:4pt 0 14pt; break-after:avoid; }
+  .sec .no{ font-family:var(--mono); font-size:10.5pt; color:var(--gold); font-weight:600;
+    margin-right:12pt; }
+  .sec h2{ font-family:var(--display); font-size:21pt; font-weight:700; color:var(--tx-hi);
+    line-height:1.1; display:inline; }
+  .lead{ font-size:11.5pt; color:var(--tx); margin-bottom:8pt; }
+
+  .h3{ font-family:var(--serif); font-size:13pt; font-weight:600; color:var(--gold);
+    margin:18pt 0 8pt; break-after:avoid; }
+  .h3 .note{ font-family:var(--mono); font-size:8pt; color:var(--tx-dim);
+    letter-spacing:.04em; margin-left:7pt; font-weight:400; }
+  p{ margin:0 0 9pt; }
+
+  /* ===== 双栏卡片（flex + margin，不用 grid/gap）===== */
+  .cols{ display:flex; margin:14pt 0; break-inside:avoid; }
+  .card{ flex:1; background:var(--card); border:1pt solid var(--line); border-radius:8pt;
+    padding:15pt 17pt; break-inside:avoid; }
+  .card + .card{ margin-left:15pt; }
+  .card .head{ font-size:11pt; font-weight:600; color:var(--tx-hi); margin-bottom:10pt; }
+  .dot{ display:inline-block; width:6pt; height:6pt; border-radius:50%; margin-right:7pt;
+    vertical-align:1pt; }
+  .dot.g{ background:var(--gold); } .dot.t{ background:var(--teal); } .dot.c{ background:var(--coral); }
+  ul.list{ list-style:none; }
+  ul.list li{ position:relative; padding-left:15pt; margin:7pt 0; font-size:10pt;
+    line-height:1.65; color:var(--tx); }
+  ul.list li::before{ content:"\25C6"; position:absolute; left:0; top:1pt; color:var(--gold); font-size:7pt; }
+
+  /* ===== callout ===== */
+  .callout{ background:linear-gradient(90deg,#1b1d24,#121319); border-left:3pt solid var(--gold);
+    border-radius:0 7pt 7pt 0; padding:14pt 18pt; margin:16pt 0; break-inside:avoid; }
+  .callout .label{ font-family:var(--mono); font-size:8pt; letter-spacing:.28em;
+    text-transform:uppercase; color:var(--gold); margin-bottom:7pt; }
+  .callout p{ font-size:10pt; line-height:1.75; margin-bottom:0; }
+
+  /* ===== 表格 ===== */
+  table{ width:100%; border-collapse:collapse; margin:14pt 0; font-size:9.5pt; break-inside:avoid; }
+  thead th{ background:var(--card2); color:var(--tx-dim); font-family:var(--mono); font-weight:600;
+    font-size:8.5pt; text-align:left; padding:9pt 11pt; }
+  tbody td{ padding:8pt 11pt; border-bottom:1pt solid var(--line); font-family:var(--mono); color:var(--tx); }
+  tbody tr td:first-child{ color:var(--tx-hi); }
+  tr.hl td{ color:var(--gold-hi); font-weight:700; }
+
+  /* ===== 漏斗（递减金条 + 右侧标注）===== */
+  .funnel{ margin:14pt 0; break-inside:avoid; }
+  .funnel .row{ display:flex; align-items:center; margin:6pt 0; }
+  .funnel .bar{ font-family:var(--mono); font-size:9pt; color:#1a1206; font-weight:700;
+    padding:8pt 14pt; border-radius:4pt; white-space:nowrap;
+    background:linear-gradient(90deg,#f6d98f 0%,#e6b961 42%,#c68f37 78%,#a06d22 100%); }
+  .funnel .bar .pct{ color:#3a2c0c; font-weight:600; }
+  .funnel .ann{ font-family:var(--mono); font-size:8.5pt; color:var(--tx-dim); margin-left:12pt; white-space:nowrap; }
+
+  /* ===== 胶囊流程 ===== */
+  .flow{ display:flex; flex-wrap:wrap; align-items:center; margin:14pt 0; }
+  .pill{ font-family:var(--mono); font-size:9pt; background:var(--card); border:1pt solid var(--line);
+    color:var(--tx); padding:7pt 13pt; border-radius:6pt; margin:4pt 8pt 4pt 0; }
+  .pill.final{ border-color:var(--gold); color:var(--gold); }
+  .arr{ color:var(--tx-dim); margin:0 8pt 0 0; }
+
+  /* ===== 编号 tips ===== */
+  .tip{ display:flex; padding:13pt 0; border-bottom:1pt dashed var(--line); break-inside:avoid; }
+  .tip .n{ font-family:var(--display); font-size:24pt; color:var(--gold); line-height:1;
+    width:30pt; flex:0 0 30pt; }
+  .tip .body{ flex:1; }
+  .tip .h{ font-size:11pt; font-weight:600; color:var(--tx-hi); margin-bottom:4pt; }
+  .tip .d{ font-size:9.5pt; color:var(--tx-dim); line-height:1.65; }
+
+  /* ===== footer ===== */
+  .footer{ text-align:center; margin-top:30pt; }
+  .footer .by{ font-family:var(--mono); font-size:9pt; color:var(--tx-dim); letter-spacing:.16em; }
+  .footer .by b{ color:var(--gold); }
+  .footer .fine{ font-size:8pt; color:#5a606c; line-height:1.7; margin-top:9pt; }
+
+  .pbreak{ break-before:page; }
+</style>
+</head>
+<body>
+
+<!-- ════════ HERO ════════ -->
+<section class="hero">
+  <span class="eyebrow">TECHNICAL READING BRIEF<span class="sub"> &nbsp;·&nbsp; 模型研发方法论拆解</span></span>
+  <h1 class="title">MAI-Thinking-1</h1>
+  <div class="subtitle">"造一台爬山机"——把模型研发当作系统级优化问题</div>
+  <div class="meta">
+    来源 <b>Microsoft AI Team · arXiv-style 技术报告</b> &nbsp;&nbsp; 发布 <b>2026-06-02</b><br>
+    35B active / 1T total · MoE &nbsp;&nbsp; 整理 <b>guyii</b> &nbsp;·&nbsp; 黑金风格 / typeset
+  </div>
+</section>
+
+<div class="stats">
+  <div class="stat"><div class="num">30T</div><div class="cap">预训练 token（+3.55T mid-train）</div></div>
+  <div class="stat"><div class="num">8K</div><div class="cap">GB200 GPU · 单逻辑集群单站点</div></div>
+  <div class="stat"><div class="num">256K</div><div class="cap">最终上下文长度</div></div>
+  <div class="stat"><div class="num">0</div><div class="cap">第三方蒸馏 / 合成预训练数据</div></div>
+</div>
+
+<hr class="sep">
+<div class="sec"><span class="no">01</span><h2>核心命题</h2></div>
+<p class="lead"><em>"AI 的进步不来自单个模型，而来自持续改进当前模型的能力。"</em> 报告把研发抽象成一台可重复运行的<em>"爬山机"</em>：数据管线、训练基础设施、RL 环境与奖励、评估套件、安全测试整体构成一个对指定领域做<em>经验优化</em>的闭环。</p>
+
+<div class="cols">
+  <div class="card">
+    <div class="head"><span class="dot g"></span>三条设计原则</div>
+    <ul class="list">
+      <li>能力要<em>"学到"</em>而非<em>"继承"</em>——拒绝蒸馏，因蒸来的智能缺乏可控性与鲁棒性</li>
+      <li><em>简单即可持续</em>——简单可扩展的配方、干净可信的数据、透明的基础设施</li>
+      <li><em>科学严谨不走捷径</em>——一切决策须经 ladder / ablation / eval 验证</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="head"><span class="dot t"></span>成绩定位（诚实）</div>
+    <ul class="list">
+      <li>AIME 2025 <b>97.0</b> · AIME 2026 <b>94.5</b></li>
+      <li>LiveCodeBench v6 <b>87.7</b> · SWE-Bench Pro <b>52.8</b></li>
+      <li>整体<em>"对标 Sonnet 4.6，不领跑但全面稳健"</em></li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec"><span class="no">02</span><h2>注意力模块</h2></div>
+<p class="lead">两条主线都用<em>"交替"</em>结构，并与 GPU 基础设施协同设计。以下是全篇围绕 <em>attention</em> 的几处关键设计。</p>
+
+<div class="h3">注意力主结构 <span class="note">periodic local + global</span></div>
+<p><b>5 层 local 配 1 层 global（5:1）</b>，抄 <em>Gemma 3</em> 思路，大幅压低训练注意力开销与推理 KV cache。local 用滑窗 <span class="tag">512</span> + RoPE（base 10000）；<b>global 层不用任何位置编码（NoPE）</b>，效果相当但更省。GQA：8 个 KV head，head dim 128，对 Q/K 加 <em>RMSNorm</em>，从而可用 <em>FlashAttention-4</em> + <em>Ulysses context parallelism</em>。</p>
+
+<div class="cols">
+  <div class="card">
+    <div class="head"><span class="dot g"></span>attention 零初始化</div>
+    <ul class="list">
+      <li>把 output RMSNorm gain 设 <b>0</b>。否则随机初始化时 <em>softmax≈均匀</em>=因果均值池化，使 token 表示趋同、MoE 路由严重失衡（越深越糟）</li>
+      <li>开局像纯 FFN，<em>cross-token 交互</em>逐渐"长出来"</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="head"><span class="dot c"></span>混合精度</div>
+    <ul class="list">
+      <li>前向 GEMM <span class="tag">FP8 E4M3</span>，data-grad <span class="tag">FP8 E5M2</span>，weight-grad <em>BF16+FP32 累加</em></li>
+      <li>残差流 / router / embedding / 最终 logits 全 <b>FP32</b>；下转用 <em>stochastic rounding</em></li>
+    </ul>
+  </div>
+</div>
+
+<div class="callout">
+  <div class="label">RL 中的注意力裁剪 · 基于 GRPO 的两处关键改动</div>
+  <p><b>① 自适应熵控制</b>：用积分控制器在线调上裁剪界 <span class="tag">k</span>（目标熵 <em>H*=0.3</em>）——熵低放宽、熵高收紧，比显式熵 bonus 更好，免去手调。<br>
+  <b>② 外层 ratio clip</b>：对所有分支加硬外裁剪（<em>rmax=50, rmin 不约束</em>），解决 GRPO 两个未裁剪分支偶发的梯度爆炸。</p>
+</div>
+
+<div class="h3">RL 爬山 · 从零学推理 <span class="note">teacher pipeline</span></div>
+<p>起点是<b>无任何推理痕迹</b>的 checkpoint，从头学。先训三个专才，再 SFT 蒸成单一模型，最后轻量 RL 收尾：</p>
+<div class="flow">
+  <span class="pill">Mid-trained</span><span class="arr">→</span>
+  <span class="pill">STEM Teacher</span><span class="arr">→</span>
+  <span class="pill">Agentic Teacher</span><span class="arr">→</span>
+  <span class="pill">Help &amp; Safety Teacher</span><span class="arr">→</span>
+  <span class="pill">Trace Distill SFT</span><span class="arr">→</span>
+  <span class="pill final">Final RL · MAI-Thinking-1</span>
+</div>
+
+<div class="sec"><span class="no">03</span><h2>SWE 环境构建漏斗</h2></div>
+<p class="lead">Agentic / SWE 环境的数据从 <em>1 亿级 PR</em> 逐级筛到 <em>26.5 万</em>可用环境——每一级都大幅收窄，这是全篇最有代表性的"漏斗"形态。</p>
+
+<div class="funnel">
+  <div class="row"><div class="bar" style="width:100%">102M PR</div></div>
+  <div class="row"><div class="bar" style="width:70%">4.87M 带 issue 链接</div></div>
+  <div class="row"><div class="bar" style="width:52%">2.08M 通过自动建镜像 <span class="pct">（42.8%）</span></div></div>
+  <div class="row"><div class="bar" style="width:40%">745K 通过参考评分 <span class="pct">（15.3%）</span></div></div>
+  <div class="row"><div class="bar" style="width:33%">265K 通过环境验证 <span class="pct">（5.5%）</span></div><span class="ann">/ 9.4 万仓库</span></div>
+</div>
+
+<div class="callout">
+  <div class="label">RL 基础设施 · ROCKET</div>
+  <p>异步分布式：<em>YOLO</em> 当 learner、<em>SGLang</em> 当推理。最大 job 用 <b>4864 颗 GB300</b>，推理:学习 ≈ <em>4096:768（5.3:1）</em>。核心是控制 learner 与 inference 引擎的数值差——两边都用 BF16 + <em>MoE routing replay</em> + <em>top-p mask replay</em>。多轮负载 prefix cache 命中率 <b>97–98%</b>。</p>
+</div>
+
+<div class="h3">防 reward hacking <span class="note">anti-cheat funnel 的另一面</span></div>
+<ul class="list">
+  <li>断网防搜 PR 答案、<em>"时间旅行"</em>清掉 base commit 之后 git 历史</li>
+  <li>grade 前重置被改测试文件、LLM 监控 <em>monkey-patch</em> 类作弊</li>
+  <li>工具极简：仅 <span class="tag">bash</span> + <span class="tag">string-replace</span>，Terminal-Bench 成绩是<em>泛化</em>而非直训</li>
+</ul>
+
+<hr class="sep">
+<div class="sec"><span class="no">04</span><h2>给你的提示</h2></div>
+<div class="tip">
+  <div class="n">1</div>
+  <div class="body"><div class="h">把 EGFLOPs vs EGTime 的分离搬进任何架构选型决策。</div><div class="d">很多"新架构不如老架构"其实是实现优化差距，而非架构本身——决策前先问"两边实现成熟度是否对等"。</div></div>
+</div>
+<div class="tip">
+  <div class="n">2</div>
+  <div class="body"><div class="h">rank invariance 不成立，是全篇最实用的警告。</div><div class="d">小模型上的数据/配比结论别直接外推到大模型；多样性不足的高质量数据在大尺度会反噬。</div></div>
+</div>
+<div class="tip">
+  <div class="n">3</div>
+  <div class="body"><div class="h">"确定性换效率"是个明确取舍信号。</div><div class="d">MFU 仅 ~20%、主动关 SHARP，说明 frontier 规模下"可复现 / 可调试"的价值高于峰值利用率。</div></div>
+</div>
+
+<div class="footer">
+  <div class="by">编制 / Prepared by &nbsp;·&nbsp; <b>guyii</b></div>
+  <div class="fine">本简报为对公开技术报告 <em>MAI-Thinking-1: Building a Hill-Climbing Machine</em> 的阅读整理；数据均引自原文，判断与提示部分为整理者观点，供讨论参考。</div>
+</div>
+
+</body>
+</html>
