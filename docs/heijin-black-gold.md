@@ -138,6 +138,13 @@ printf '{"文档标题":"我的简报"}' > /tmp/slots.json
 - ❌ **不要用** CSS `grid` 和 `gap`（WeasyPrint 支持不稳）。多列布局用 `display:flex` + `.card + .card{margin-left}`
 - 所有"块"组件加 `break-inside:avoid`（深色卡片被分页切断极丑）
 - 不要用固定页高 `min-height:297mm` + 强制 `break`，容易产生半空孤页；让内容自然流式分页
+- 🚨 **CJK 必须用 glyf(TrueType) 轮廓字体**：思源宋体 / Noto CJK 原生是 **CFF/OTF**，
+  WeasyPrint 子集嵌入成 `CID Type 0C` 后，**iOS / 苹果 PDFKit 渲染中文整片空白**
+  （桌面 poppler/Adobe 正常，极易漏掉）。本模板已把思源宋体 `CFF→TTF(glyf)` 转换为
+  `templates/kami/fonts/SourceHanSerifCN-{Regular,Bold}.woff2`，并以家族名
+  `"Source Han Serif CN TT"` 经 @font-face 引用；**所有承载中文的字体栈（含 @page 页脚）
+  都必须把它放在 CFF 字体之前**。验证：`pdffonts out.pdf` 不应出现 `Type 0C`（应全是
+  `CID TrueType`）。转换脚本见 commit 历史（fontTools cu2qu，每字重约 16s）。
 
 ---
 

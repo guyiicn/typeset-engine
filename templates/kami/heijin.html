@@ -12,7 +12,10 @@
         仅用于卡片头区分语义，绝不进正文。
      2. 字体二元：衬线承载叙述，等宽承载数据/代码/标签。
         - 拉丁大标题 = Playfair Display（Didone 高对比，杂志感）
-        - 中文标题/正文 = Source Han Serif CN / Noto Serif CJK SC（思源宋体）
+        - 中文标题/正文 = Source Han Serif CN TT（思源宋体 CFF→glyf 转换版，自包含）
+          🚨 CJK 必须用 glyf(TrueType) 轮廓字体：原 CFF/OTF 思源/Noto CJK 被
+             WeasyPrint 子集嵌入后，在 iOS / 苹果 PDFKit 上中文整片空白（CID Type 0C
+             苹果解析失败），桌面 poppler 正常。故预先把思源宋体转成 glyf 再 @font-face。
         - 拉丁正文衬线（含斜体）= Newsreader
         - 等宽 = JetBrains Mono + Noto Sans Mono CJK SC
      3. 斜体即强调：关键术语/书名/引语用 <em> 衬线斜体。
@@ -67,21 +70,28 @@
   @font-face{ font-family:"Playfair Display"; src:url("fonts/PlayfairDisplay-800.woff2") format("woff2"); font-weight:700 900; font-style:normal; font-display:swap; }
   @font-face{ font-family:"Newsreader"; src:url("fonts/Newsreader.woff2") format("woff2"); font-weight:400 600; font-display:swap; }
   @font-face{ font-family:"JetBrains Mono"; src:url("fonts/JetBrainsMono.woff2") format("woff2"); font-weight:400 600; font-display:swap; }
+  /* 中文衬线：思源宋体 CFF→TTF(glyf) 转换版，自包含。
+     ⚠ 必须用 glyf 轮廓——原 CFF/OTF 思源/Noto CJK 被 WeasyPrint 子集嵌入后
+     在 iOS PDFKit 上中文空白（CID Type 0C 苹果解析失败），glyf(TrueType) 全平台正常。 */
+  @font-face{ font-family:"Source Han Serif CN TT"; src:url("fonts/SourceHanSerifCN-Regular.woff2") format("woff2"); font-weight:300 500; font-style:normal; font-display:swap; }
+  @font-face{ font-family:"Source Han Serif CN TT"; src:url("fonts/SourceHanSerifCN-Bold.woff2") format("woff2"); font-weight:600 900; font-style:normal; font-display:swap; }
 
   :root{
     --bg:#0a0c10; --card:#14171f; --card2:#181c26; --line:#262b37;
     --gold:#cda85f; --gold-hi:#e2bd6d; --teal:#5cb79a; --coral:#d9895c;
     --tx:#c4c9d2; --tx-hi:#eef0f4; --tx-dim:#7f8694;
-    --serif:"Newsreader","Source Han Serif CN","Noto Serif CJK SC",Georgia,serif;
-    --display:"Playfair Display","Source Han Serif CN","Noto Serif CJK SC",Georgia,serif;
-    --mono:"JetBrains Mono","Noto Sans Mono CJK SC",monospace;
+    /* CJK 一律走 glyf 的 "Source Han Serif CN TT"（iOS 安全）；Latin 用 Playfair/Newsreader/JetBrains。
+       CFF 的 "Source Han Serif CN"/"Noto Serif CJK SC" 仅作末位兜底，正常不会命中。 */
+    --serif:"Newsreader","Source Han Serif CN TT","Source Han Serif CN","Noto Serif CJK SC",Georgia,serif;
+    --display:"Playfair Display","Source Han Serif CN TT","Source Han Serif CN","Noto Serif CJK SC",Georgia,serif;
+    --mono:"JetBrains Mono","Source Han Serif CN TT","Noto Sans Mono CJK SC",monospace;
   }
 
   @page{
     size:A4; margin:20mm 17mm; background:#0a0c10;
-    @bottom-right{ content:counter(page); font-family:"JetBrains Mono","Noto Sans Mono CJK SC",monospace;
+    @bottom-right{ content:counter(page); font-family:"JetBrains Mono","Source Han Serif CN TT","Noto Sans Mono CJK SC",monospace;
       font-size:8pt; color:#5a6072; }
-    @bottom-left{ content:"{{文档标题}}"; font-family:"JetBrains Mono","Noto Sans Mono CJK SC",monospace;
+    @bottom-left{ content:"{{文档标题}}"; font-family:"JetBrains Mono","Source Han Serif CN TT","Noto Sans Mono CJK SC",monospace;
       font-size:8pt; color:#5a6072; letter-spacing:.5pt; }
   }
   @page:first{ @bottom-right{ content:""; } @bottom-left{ content:""; } }
