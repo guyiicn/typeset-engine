@@ -35,6 +35,7 @@ DOC_TYPES = {
     "long-doc-claude", "long-doc-openai", "long-doc-starwars",
     "letter", "portfolio", "resume",
     "founders-playbook",  # 创始人指南
+    "heijin", "黑金",  # 黑金风格深色技术阅读简报（black-gold；触发词"黑金风格"），"黑金" 为别名（symlink → heijin）
 }
 
 # 每个 doc_type 的页数硬约束（见 design-constraints 第 5 节）
@@ -48,6 +49,8 @@ PAGE_LIMITS = {
     "long-doc-starwars":  (5, 80),   # Star Wars 戏剧化风格（封面+扉页深空底，正文米白）
     "portfolio":          (4, 8),    # 6±2 软
     "founders-playbook":  (10, 40),  # 创始人指南（封面+目录+N 章节）
+    "heijin":             (1, 12),   # 黑金风格简报（hero+若干节，密度高，软约束）
+    "黑金":               (1, 12),   # heijin 别名
 }
 
 # ── founders-playbook 数据驱动渲染 ─────────────────────────────────────
