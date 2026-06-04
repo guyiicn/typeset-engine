@@ -10,7 +10,8 @@ description: '统一文档渲染引擎。通过 HTTP API (native 部署优先, d
   触发词：生成报告、排版、做个PDF、做个PPT、生成图表、投研报告、中金风格、
   渲染文档、出个Word、chart、illustrate、配图、AI PPT、幻灯片、Coding Plan、
   claude 风格、anthropic 风格、烧橙风格、长文报告、管理层讨论稿、研究报告 PDF、
-  创始人指南、founders playbook、创业者风格、星战风格、star wars、光剑风格。
+  创始人指南、founders playbook、创业者风格、星战风格、star wars、光剑风格、
+  学术论文、ieee 格式、中文论文、工作论文、SSRN、论文排版。
   不要用于：纯文本输出、Markdown 输出、不需要排版的场景。'
 metadata:
   clawdbot:
@@ -44,6 +45,7 @@ HTTP API（默认端口 9091）生成专业文档。一个 curl 调用 = 一份�
 - **"claude 风格" / "anthropic 风格" / "烧橙风格" / "长文报告" / "管理层讨论稿"** → kami `long-doc-claude`
 - **"创始人指南" / "founders playbook" / "创业者风格" / "数据驱动长文"** → kami `founders-playbook`（slots + chapters[] 数据驱动，7 色循环扉页 + Claude 太阳花 logo）
 - **"星战风格" / "star wars" / "光剑风格" / "银河风格"** → kami `long-doc-starwars`（深空蓝封面 + Star Wars 黄 + EPISODE 罗马数字章节扉页，**内部 / 创意场景 only**，不外发客户）
+- **"学术论文" / "ieee 格式" / "中文论文" / "工作论文" / "SSRN"** → `/render/pdf` + `?theme=ieee|cn-paper|working-paper`（学位论文 PKU/HUST/SJTU 直接写 Typst 源码，不走 JSON API）
 
 ---
 
@@ -127,6 +129,7 @@ docker start typeset-engine
 | 用户说 | 端点 | 输出 | 需 API Key |
 |---|---|---|:---:|
 | 投研报告 / 白皮书（Typst 强结构）| `POST /render/pdf` | PDF | 否 |
+| 学术论文 / ieee / 中文论文 / 工作论文（`?theme=ieee\|cn-paper\|working-paper`）| `POST /render/pdf` | PDF | 否 |
 | 简历 / 一页纸 / 正式信件 / 作品集 / 长文报告 / 创始人指南 / 星战风 | `POST /render/kami` | PDF | 否 |
 | 出个 Word / 文档化 | `POST /render/docx` | DOCX | 否 |
 | 做 PPT / 演示 / 幻灯片 | `POST /render/pptx` | PPTX | 否 |
@@ -152,8 +155,35 @@ docker start typeset-engine
 > `ZeroDivisionError: cols=0`，已在 commit 13953a3 修 docstring）。
 
 **kami 路线 vs /render/pdf 路线的差别**：
-- `/render/pdf`（Typst）：cicc/ms/cms/dachen 等**投行/金融主题**，JSON → 结构化报告，适合有 KPI 卡、图表、目录、免责声明的**长报告**
+- `/render/pdf`（Typst）：cicc/ms/cms/dachen 等**投行/金融主题** + ieee/cn-paper/working-paper 等**学术主题**，JSON → 结构化报告，适合有 KPI 卡、图表、目录、免责声明的**长报告**
 - `/render/kami`（WeasyPrint）：**编辑级精排**（简历/一页纸/白皮书/信件/作品集），暖米纸 + 油墨蓝 + serif 500，agent 填 HTML 模板直出
+
+**学术主题速查**：
+
+| theme | 说明 | 字体/格式 |
+|-------|------|----------|
+| `ieee` | IEEE 双栏学术论文 | Liberation Serif, 10pt |
+| `cn-paper` | 中文学术论文 | 宋体/黑体/楷体, 五号 |
+| `working-paper` | SSRN 工作论文 | 英文通用学术 |
+
+学术 JSON 最简示例：
+```bash
+curl -s -X POST "http://localhost:9091/render/pdf?theme=ieee" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Paper Title",
+    "authors": [{"name": "Author", "organization": "University"}],
+    "abstract": "Abstract text...",
+    "keywords": ["AI", "NLP"],
+    "sections": [
+      {"type": "heading", "title": "Introduction", "children": [
+        {"type": "paragraph", "content": "Content..."}
+      ]}
+    ]
+  }' -o /tmp/paper.pdf
+```
+
+> ⚠️ **学位论文**（PKU / HUST / SJTU）模板存于 `templates/academic/`，需直接写 Typst 源码 import，**不走 JSON API**。
 
 模糊时**一句话问**，不要猜（例："做个总结" → 问"想要投研格式报告还是编辑级精排？"）。
 
